@@ -1,0 +1,204 @@
+/* ---------- base ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #030409;
+  --fg: #dfe9f5;
+  --dim: #6b7c94;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+#gl {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#ui > * {
+  pointer-events: auto;
+}
+
+.hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ---------- menu ---------- */
+.menu {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+  padding: 2rem;
+  background:
+    radial-gradient(ellipse at 50% -20%, #0a1430 0%, transparent 60%),
+    var(--bg);
+  transition: opacity 0.6s ease;
+}
+
+.menu-header {
+  text-align: center;
+}
+
+.menu-title {
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 200;
+  letter-spacing: 0.55em;
+  margin-right: -0.55em; /* compensa el tracking del ultimo caracter */
+  text-transform: uppercase;
+  color: var(--fg);
+  text-shadow: 0 0 30px rgba(120, 180, 255, 0.35);
+}
+
+.menu-subtitle {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.menu-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+/* ---------- tarjetas de mundo ---------- */
+.card {
+  --accent: #00e5ff;
+  width: min(300px, 84vw);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 10px;
+  background: rgba(8, 12, 24, 0.75);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  transform: translateY(-6px);
+  border-color: var(--accent);
+  box-shadow: 0 12px 50px -12px color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: none;
+}
+
+/* Preview placeholder: degradado animado con el acento del mundo.
+   La tarea 7 monta aqui una mini escena WebGL animada. */
+.card-preview {
+  height: 150px;
+  background:
+    linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 18%, transparent) 50%, transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 80%);
+  background-size: 300% 100%, 100% 100%;
+  animation: preview-sweep 4s linear infinite;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+@keyframes preview-sweep {
+  from {
+    background-position: 150% 0, 0 0;
+  }
+  to {
+    background-position: -150% 0, 0 0;
+  }
+}
+
+.card-body {
+  padding: 1.1rem 1.25rem 1.35rem;
+}
+
+.card-name {
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.card-tagline {
+  margin-top: 0.45rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--dim);
+}
+
+/* ---------- HUD ---------- */
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+.hud-title {
+  position: absolute;
+  bottom: 1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  letter-spacing: 0.5em;
+  margin-right: -0.5em;
+  text-transform: uppercase;
+  color: rgba(223, 233, 245, 0.55);
+}
+
+.hud-back {
+  position: absolute;
+  top: 1.4rem;
+  left: 1.6rem;
+  pointer-events: auto;
+  background: none;
+  border: none;
+  color: rgba(223, 233, 245, 0.45);
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.hud-back:hover {
+  color: var(--fg);
+}
+
+/* ---------- transicion ---------- */
+.transition {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.7s ease;
+}

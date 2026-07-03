@@ -1,0 +1,22 @@
+{
+  "name": "goldenidea",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Viajes procedurales por mundos 3D inspirados en el ciberespacio de los 90",
+  "scripts": {
+    "dev": "vite",
+    "check": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "release": "npm run build && node scripts/release.mjs"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.3"
+  }
+}
