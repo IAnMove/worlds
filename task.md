@@ -170,7 +170,7 @@ autopistas, paneles y arcos sin cortes visibles de generación; 60 fps.
 
 ---
 
-## Tarea 5 — [FABLE] Psychedelic: túnel deformado con vertex shader
+## Tarea 5 — [FABLE] Psychedelic: túnel deformado con vertex shader ✅ (hecha por FABLE)
 
 **Archivo:** `src/worlds/PsychedelicWorld.ts` + `src/worlds/shaders/psyTunnel.ts`.
 
