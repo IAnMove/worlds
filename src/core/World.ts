@@ -43,6 +43,13 @@ export abstract class World {
   /** Avance por frame: animar, reciclar elementos, generar sensacion de vida. */
   abstract update(dt: number, elapsed: number, camera: THREE.PerspectiveCamera): void;
 
+  /**
+   * Opcional: empuje de esquiva. El mundo escribe en `out` un sesgo de rumbo
+   * [-1,1] (x = guinada, y = cabeceo) que el FlightController suma al stick:
+   * una corriente invisible que aparta el vuelo de los obstaculos.
+   */
+  steerBias?(camera: THREE.PerspectiveCamera, out: THREE.Vector2): void;
+
   /** Libera geometrias, materiales y texturas. Override solo si hay recursos extra. */
   dispose(): void {
     this.scene.traverse((obj) => {

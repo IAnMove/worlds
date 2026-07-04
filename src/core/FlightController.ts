@@ -25,6 +25,8 @@ export class FlightController {
   speed = 20;
   enabled = false;
   bounds: FlightBounds | null = null;
+  /** Sesgo de esquiva escrito por el mundo (ver World.steerBias). */
+  readonly bias = new THREE.Vector2();
 
   /** Segundos sin mover el raton antes de pasar a deriva automatica. */
   private static readonly IDLE_AFTER = 2.5;
@@ -69,6 +71,7 @@ export class FlightController {
     this.yaw = this.pitch = this.roll = 0;
     this.yawVel = this.pitchVel = 0;
     this.stick.set(0, 0);
+    this.bias.set(0, 0);
     this.lastMouseMove = -Infinity;
   }
 
@@ -94,6 +97,11 @@ export class FlightController {
       steerX = applyDeadzone(this.stick.x, FlightController.DEADZONE);
       steerY = applyDeadzone(this.stick.y, FlightController.DEADZONE);
     }
+
+    // La esquiva del mundo se suma siempre (tambien en idle): una corriente
+    // que aparta el vuelo de los obstaculos sin quitarle el mando al usuario
+    steerX = clamp(steerX + this.bias.x, -1.3, 1.3);
+    steerY = clamp(steerY + this.bias.y, -1.3, 1.3);
 
     // La desviacion del stick fija una velocidad angular objetivo;
     // damp() aporta la inercia (aceleracion y frenada suaves).

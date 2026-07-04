@@ -48,7 +48,7 @@ Motor, vuelo, UI, tres mundos placeholder, script de release. Ya commiteada.
 
 ---
 
-## Tarea 1 — Data City: rascacielos de información
+## Tarea 1 — Data City: rascacielos de información ✅ (hecha por FABLE)
 
 **Archivo:** `src/worlds/DataCityWorld.ts` (sustituir el placeholder).
 
@@ -84,7 +84,7 @@ ventanas iluminadas, coronas brillando con bloom y avenidas oscuras; 60 fps;
 
 ---
 
-## Tarea 2 — Data City: tráfico de datos
+## Tarea 2 — Data City: tráfico de datos ✅ (hecha por FABLE)
 
 **Archivo:** `src/worlds/DataCityWorld.ts`.
 

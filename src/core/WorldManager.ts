@@ -89,6 +89,8 @@ export class WorldManager {
 
   private update(dt: number, elapsed: number): void {
     if (!this.current) return;
+    this.flight.bias.set(0, 0);
+    this.current.steerBias?.(this.engine.camera, this.flight.bias);
     this.flight.update(dt, elapsed);
     this.current.update(dt, elapsed, this.engine.camera);
   }
