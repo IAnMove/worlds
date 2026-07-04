@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { BloomSettings } from './PostFX';
+import type { FlightBounds } from './FlightController';
 
 /**
  * Configuracion declarativa de un mundo. El WorldManager la aplica
@@ -15,6 +16,11 @@ export interface WorldConfig {
   bloom: BloomSettings;
   /** Posicion inicial de la camara (por defecto 0,12,0). */
   cameraStart?: THREE.Vector3;
+  /**
+   * Colliders invisibles: limites blandos que reconducen el vuelo hacia la
+   * zona con contenido (rebote suave, nunca un tope seco). Sin definir = libre.
+   */
+  bounds?: FlightBounds;
 }
 
 /**

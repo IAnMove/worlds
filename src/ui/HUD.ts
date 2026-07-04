@@ -17,7 +17,7 @@ export class HUD {
 
     const back = document.createElement('button');
     back.className = 'hud-back';
-    back.textContent = '‹ menu';
+    back.textContent = '‹ esc · menu';
     back.addEventListener('click', () => this.onBack?.());
 
     this.root.append(back, this.title);

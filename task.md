@@ -271,7 +271,7 @@ la pestaña Performance que no hay rAF activo durante un viaje).
 
 ---
 
-## Tarea 9 — Afinado del vuelo
+## Tarea 9 — Afinado del vuelo ✅ (hecha por FABLE, ampliada)
 
 **Archivo:** `src/core/FlightController.ts`.
 
@@ -291,6 +291,13 @@ la pestaña Performance que no hay rAF activo durante un viaje).
 **Criterio de aceptación:** dejar el ratón quieto 60 s produce un vuelo que
 parece pilotado por alguien soñando; es imposible estrellarse contra el suelo
 en Data City/Matrix; retomar el ratón nunca produce un tirón.
+
+**Nota de implementación (FABLE):** además de lo pedido se añadió pointer
+lock: al entrar a un mundo se captura el ratón (deltas sobre un stick virtual
+auto-centrado) y ESC lo libera volviendo al menú (via `pointerlockchange`,
+porque con lock activo ESC no llega como keydown). Los límites son
+`bounds {minY,maxY,margin}` en `WorldConfig` — empuje angular + colchón
+posicional, sin clamps secos.
 
 ---
 

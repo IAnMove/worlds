@@ -30,6 +30,8 @@ export class DataCityWorld extends World {
     fogDensity: 0.0065,
     bloom: { strength: 0.9, radius: 0.7, threshold: 0.55 },
     cameraStart: new THREE.Vector3(0, 26, 0),
+    // Colliders blandos: ni bajo el suelo ni perderse por encima de la ciudad
+    bounds: { minY: 7, maxY: 190, margin: 24 },
   };
 
   private readonly rng = createRng(1337);

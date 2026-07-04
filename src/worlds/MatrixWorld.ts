@@ -28,6 +28,8 @@ export class MatrixWorld extends World {
     fogDensity: 0.009,
     bloom: { strength: 1.1, radius: 0.8, threshold: 0.4 },
     cameraStart: new THREE.Vector3(0, 20, 0),
+    // Colliders blandos: ni bajo el suelo ni perderse por encima
+    bounds: { minY: 6, maxY: 200, margin: 24 },
   };
 
   private readonly rng = createRng(2049);

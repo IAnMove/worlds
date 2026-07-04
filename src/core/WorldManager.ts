@@ -28,6 +28,13 @@ export class WorldManager {
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') void this.exitToMenu();
     });
+    // Con pointer lock activo, ESC no llega como keydown: el navegador
+    // libera el lock. Detectamos esa liberacion y salimos al menu.
+    document.addEventListener('pointerlockchange', () => {
+      if (!document.pointerLockElement && this.current && !this.busy) {
+        void this.exitToMenu();
+      }
+    });
   }
 
   private async enter(def: WorldDefinition): Promise<void> {
@@ -44,6 +51,7 @@ export class WorldManager {
 
     this.flight.reset(cfg.cameraStart);
     this.flight.speed = cfg.flySpeed;
+    this.flight.bounds = cfg.bounds ?? null;
     world.init(this.engine.camera);
 
     this.engine.postfx.setBloom(cfg.bloom);
@@ -54,12 +62,18 @@ export class WorldManager {
 
     await this.transition.fadeIn();
     this.busy = false;
+
+    // Capturar el raton: el cursor desaparece y el vuelo usa deltas.
+    // ESC lo libera (y pointerlockchange nos devuelve al menu). Si el
+    // navegador lo rechaza, seguimos con el modo posicion absoluta.
+    this.engine.renderer.domElement.requestPointerLock()?.catch?.(() => {});
   }
 
   private async exitToMenu(): Promise<void> {
     if (this.busy || !this.current) return;
     this.busy = true;
 
+    if (document.pointerLockElement) document.exitPointerLock();
     await this.transition.fadeOut();
 
     this.flight.enabled = false;
