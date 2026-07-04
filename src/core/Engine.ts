@@ -27,7 +27,9 @@ export class Engine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
-    this.camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1200);
+    // near 0.5: con near 0.1 la precision del z-buffer a centenares de
+    // unidades produce z-fighting (slivers) en geometria que se auto-ocluye
+    this.camera = new THREE.PerspectiveCamera(70, 1, 0.5, 1200);
 
     this.postfx = new PostFX(this.renderer, this.camera);
 

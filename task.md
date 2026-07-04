@@ -197,7 +197,7 @@ que respira y cambia de color continuamente, sin costuras visibles; 60 fps.
 
 ---
 
-## Tarea 6 — Psychedelic: partículas orgánicas y luces dinámicas
+## Tarea 6 — Psychedelic: partículas orgánicas y luces dinámicas ✅ (hecha por FABLE)
 
 **Archivo:** `src/worlds/PsychedelicWorld.ts`.
 
