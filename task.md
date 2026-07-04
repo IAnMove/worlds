@@ -112,7 +112,7 @@ torres constantemente en cualquier dirección de vuelo; 60 fps estables.
 
 ---
 
-## Tarea 3 — [FABLE] Matrix: lluvia de glifos con shader propio
+## Tarea 3 — [FABLE] Matrix: lluvia de glifos con shader propio ✅ (hecha por FABLE)
 
 **Archivo:** `src/worlds/MatrixWorld.ts` + nuevo `src/worlds/shaders/matrixRain.ts`.
 
@@ -142,7 +142,7 @@ columnas.
 
 ---
 
-## Tarea 4 — Matrix: autopistas de datos y arquitectura imposible
+## Tarea 4 — Matrix: autopistas de datos y arquitectura imposible ✅ (hecha por FABLE)
 
 **Archivo:** `src/worlds/MatrixWorld.ts`.
 
