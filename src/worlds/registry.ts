@@ -2,6 +2,7 @@ import type { World } from '../core/World';
 import { DataCityWorld } from './DataCityWorld';
 import { MatrixWorld } from './MatrixWorld';
 import { PsychedelicWorld } from './PsychedelicWorld';
+import { PyramidWorld } from './PyramidWorld';
 
 /**
  * Catalogo de mundos. Para anadir un mundo nuevo:
@@ -39,5 +40,12 @@ export const WORLDS: readonly WorldDefinition[] = [
     tagline: 'Un sueno abstracto sin final',
     accent: '#ff4dd8',
     create: () => new PsychedelicWorld(),
+  },
+  {
+    id: 'pyramid-dusk',
+    name: 'Pyramid Dusk',
+    tagline: 'Piramides bajo un cielo en llamas',
+    accent: '#ff8c1a',
+    create: () => new PyramidWorld(),
   },
 ];

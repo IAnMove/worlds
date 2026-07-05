@@ -352,6 +352,88 @@ ruta rota (la build usa rutas relativas, `base: './'`).
 
 ---
 
+## Tarea 13 — Nuevo mundo: Pyramid Dusk (estructura)
+
+Inspirado en `../imagen_ligera.jpg` (raíz del repo): desierto nocturno de
+pirámides azul oscuro bajo un cielo negro con llamaradas naranjas, y
+tentáculos púrpura serpenteando a ras de suelo. Horror cósmico pintado.
+
+**Archivos:** nuevo `src/worlds/PyramidWorld.ts`, `src/worlds/registry.ts`.
+
+**Patrón de referencia obligatorio:** `DataCityWorld.ts` (instancing +
+`respawnAheadXZ`) y la técnica de tubos de la Tarea 4 en `MatrixWorld.ts`
+(reescribir el buffer de una `TubeGeometry` existente, nunca alocar).
+
+1. **Registro**: entrada en `registry.ts` con
+   `id: 'pyramid-dusk'`, `name: 'Pyramid Dusk'`,
+   `tagline: 'Piramides bajo un cielo en llamas'`, `accent: '#ff8c1a'`.
+2. **WorldConfig**: `flySpeed: 26`, `clearColor: 0x060310`,
+   `fogDensity: 0.0085`, bloom `{ strength: 0.9, radius: 0.6, threshold: 0.55 }`,
+   `cameraStart` en `(0, 18, 0)`, `bounds` con `minY: 8` y `maxY: 160`
+   (mismo formato que Data City).
+3. **Pirámides**: UN `InstancedMesh` de `ConeGeometry(1, 1, 4)` (cono de 4
+   lados = pirámide), 240 instancias, `MeshStandardMaterial` con
+   `flatShading: true`, color base `#0d1f3c`. Por instancia (con
+   `createRng`): base 18–80 unidades, altura 0.7–1.1 × base, rotación Y
+   aleatoria a múltiplos de 45°, y `setColorAt` variando el azul entre
+   `#081226` y `#1a3a66`. Posiciones en array + `respawnAheadXZ`, separación
+   mínima 30 unidades del eje de vuelo para no atravesarlas de frente.
+4. **Luz**: `DirectionalLight` naranja `#ff7a26` intensidad 1.4 casi rasante
+   (dirección `(0.3, 0.18, -1)` normalizada, como sol poniéndose en el
+   horizonte) + `AmbientLight` azul `#16224d` intensidad 0.5. Resultado: cara
+   naranja / cara azul en cada pirámide, como en el cuadro.
+5. **Aristas incandescentes**: pool de 24 `LineSegments` creados una vez en
+   `init()` a partir de `EdgesGeometry` del cono unidad,
+   `LineBasicMaterial` naranja `#ffb347` transparente (opacidad 0.9, que el
+   bloom las encienda). Cada uno se "pega" a una de las 24 primeras
+   instancias copiando su matriz cuando esa instancia se recicla.
+6. **Tentáculos**: pool de 10 tubos (`TubeGeometry` sobre
+   `CatmullRomCurve3` de 6 puntos, radio 1.6, 64×8 segmentos), material
+   `MeshStandardMaterial` púrpura `#3a2050`, `roughness: 0.55`. Curvas a ras
+   de suelo (y entre 0 y 12) que se arquean y retuercen; regenerar delante de
+   la cámara con `isBehind` margen 120 reescribiendo el buffer de posiciones
+   (técnica exacta de la Tarea 4: mismos segmentos ⇒ mismo tamaño).
+   Balanceo sutil en `update()`: `rotation.z = sin(elapsed*0.4 + fase) * 0.04`.
+7. **Suelo**: plano 4000×4000 `MeshStandardMaterial` `#07030a` que sigue a la
+   cámara en XZ (cuantizado, como el grid de Data City), sin grid visible.
+8. **Ascuas**: 700 `THREE.Points` aditivos, tamaño 0.5, colores entre
+   `#ff6a00` y `#ffd24d` por vértice, `wrapAround` en XYZ (media caja 90),
+   deriva ascendente lenta (0.5–2 u/s) + oscilación senoidal en X
+   (precalcular fases/frecuencias en `Float32Array` en `init`, como el polvo
+   de Psychedelic).
+9. Cielo provisional: solo `clearColor` + niebla (el cielo pintado llega en
+   la Tarea 14). 900 estrellas (`THREE.Points` blanco-azulado, tamaño 0.8)
+   en un cascarón entre y 250 y 450 siguiendo a la cámara en XZ.
+
+**Criterio de aceptación:** volar 2 minutos muestra un desierto infinito de
+pirámides bicolor (naranja/azul) con algunas aristas ardiendo, tentáculos
+retorciéndose a ras de suelo y ascuas subiendo; 60 fps; cero `new` de
+objetos/vectores dentro de `update()`; ESC entra y sale sin errores en consola.
+
+---
+
+## Tarea 14 — [FABLE] Pyramid Dusk: cielo en llamas y dirección de arte
+
+**Archivos:** `src/worlds/PyramidWorld.ts` + nuevo `src/worlds/shaders/fireSky.ts`.
+
+1. Cúpula de cielo con `ShaderMaterial` propio (`side: BackSide`): degradado
+   negro→azul profundo con vetas de fuego naranjas/amarillas animadas
+   (fbm/simplex estirado en horizontal), remolinos azules y salpicaduras tipo
+   pintura — replicar la energía del cuadro, no un cielo realista.
+2. Resplandor rojo sangre en el horizonte bajo (como la base del cuadro),
+   alimentando sutilmente el bloom.
+3. Pasada de paleta con capturas comparadas contra `imagen_ligera.jpg`:
+   niebla, intensidades de luz, bloom y colores de tentáculos/aristas.
+4. Deformación orgánica de los tentáculos si hace falta (ruido en vértices
+   vía shader o reescritura de buffer) para que parezcan vivos, no mangueras.
+
+Shader art que hay que afinar a ojo: la hace FABLE.
+
+**Criterio de aceptación:** una captura del mundo junto al cuadro se reconoce
+como "el mismo lugar"; 60 fps.
+
+---
+
 ## Ideas futuras (no son tareas todavía)
 
 - Música generativa + audio reactivo (analizador → uniforms de shaders).
