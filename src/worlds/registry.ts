@@ -3,6 +3,7 @@ import { DataCityWorld } from './DataCityWorld';
 import { MatrixWorld } from './MatrixWorld';
 import { PsychedelicWorld } from './PsychedelicWorld';
 import { PyramidWorld } from './PyramidWorld';
+import { SynthwaveWorld } from './SynthwaveWorld';
 
 /**
  * Catalogo de mundos. Para anadir un mundo nuevo:
@@ -40,6 +41,13 @@ export const WORLDS: readonly WorldDefinition[] = [
     tagline: 'Un sueno abstracto sin final',
     accent: '#ff4dd8',
     create: () => new PsychedelicWorld(),
+  },
+  {
+    id: 'synthwave',
+    name: 'Neon Horizon',
+    tagline: 'Rejilla de neon hacia un sol de bandas',
+    accent: '#ff2e97',
+    create: () => new SynthwaveWorld(),
   },
   {
     id: 'pyramid-dusk',
