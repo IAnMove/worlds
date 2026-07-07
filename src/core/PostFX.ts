@@ -21,6 +21,8 @@ export class PostFX {
   private readonly renderPass: RenderPass;
   private readonly bloomPass: UnrealBloomPass;
   private scene: THREE.Scene | null = null;
+  private w = 1;
+  private h = 1;
 
   constructor(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
     this.composer = new EffectComposer(renderer);
@@ -43,7 +45,18 @@ export class PostFX {
   }
 
   setSize(w: number, h: number): void {
+    this.w = w;
+    this.h = h;
     this.composer.setSize(w, h);
+  }
+
+  /**
+   * Escala interna de render (resolucion dinamica). El bloom y toda la
+   * escena cuestan por pixel: bajar esto en mundos pesados recupera fluidez.
+   */
+  setPixelRatio(pixelRatio: number): void {
+    this.composer.setPixelRatio(pixelRatio);
+    this.composer.setSize(this.w, this.h);
   }
 
   render(dt: number): void {

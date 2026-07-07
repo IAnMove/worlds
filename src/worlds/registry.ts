@@ -2,6 +2,7 @@ import type { World } from '../core/World';
 import { DataCityWorld } from './DataCityWorld';
 import { MatrixWorld } from './MatrixWorld';
 import { PsychedelicWorld } from './PsychedelicWorld';
+import { OutrunWorld } from './OutrunWorld';
 import { PyramidWorld } from './PyramidWorld';
 import { SynthwaveWorld } from './SynthwaveWorld';
 
@@ -41,6 +42,13 @@ export const WORLDS: readonly WorldDefinition[] = [
     tagline: 'Un sueno abstracto sin final',
     accent: '#ff4dd8',
     create: () => new PsychedelicWorld(),
+  },
+  {
+    id: 'outrun',
+    name: 'Violet Drive',
+    tagline: 'Carretera de neon hacia el sol infinito',
+    accent: '#b26bff',
+    create: () => new OutrunWorld(),
   },
   {
     id: 'synthwave',

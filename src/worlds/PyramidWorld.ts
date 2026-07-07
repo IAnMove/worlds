@@ -23,6 +23,13 @@ const EMBER_COUNT = 700;
 const EMBER_HALF = 90;
 const STAR_COUNT = 900;
 
+// Meteoritos: caen del cielo, impactan el suelo y lo iluminan con un fogonazo
+const METEOR_COUNT = 4;
+const METEOR_FLASH_DUR = 1.1;   // duracion del destello tras el impacto (s)
+const METEOR_FLASH_PEAK = 6500; // intensidad pico de la luz de impacto
+const METEOR_FALL_GLOW = 500;   // luz de la bola mientras cae
+const METEOR_RING_MAX = 90;     // radio final de la onda de choque
+
 const tmpMatrix = new THREE.Matrix4();
 const tmpQuat = new THREE.Quaternion();
 const tmpScale = new THREE.Vector3();
@@ -49,11 +56,22 @@ interface Tentacle {
   anchor: THREE.Vector3;
 }
 
+interface Meteor {
+  state: 'fall' | 'flash' | 'idle';
+  pos: THREE.Vector3;
+  vel: THREE.Vector3;
+  impact: THREE.Vector3;
+  timer: number;
+  light: THREE.PointLight;
+  head: THREE.Mesh<THREE.ConeGeometry, THREE.MeshBasicMaterial>;
+  ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
+}
+
 export class PyramidWorld extends World {
   readonly config: WorldConfig = {
     flySpeed: 26,
-    clearColor: 0x060310,
-    fogDensity: 0.0085,
+    clearColor: 0x0b0a26,
+    fogDensity: 0.0072,
     bloom: { strength: 0.9, radius: 0.6, threshold: 0.55 },
     cameraStart: new THREE.Vector3(0, 18, 0),
     bounds: { minY: 8, maxY: 160, margin: 24 },
@@ -71,6 +89,7 @@ export class PyramidWorld extends World {
 
   private ground!: THREE.Mesh;
   private readonly tentacles: Tentacle[] = [];
+  private readonly meteors: Meteor[] = [];
 
   private embers!: THREE.Points;
   private emberPositions!: Float32Array;
@@ -84,16 +103,20 @@ export class PyramidWorld extends World {
   private stars!: THREE.Points;
 
   init(camera: THREE.PerspectiveCamera): void {
-    this.scene.add(new THREE.AmbientLight(0x16224d, 0.5));
+    // Luz de cielo/suelo: da volumen sin aplanar la escena
+    this.scene.add(new THREE.HemisphereLight(0x3a4c8c, 0x241436, 0.85));
+    this.scene.add(new THREE.AmbientLight(0x1c2a5a, 0.45));
 
-    const sun = new THREE.DirectionalLight(0xff7a26, 1.4);
-    sun.position.set(0.3, 0.18, -1).normalize();
+    // Sol de ocaso rasante, mas presente que antes
+    const sun = new THREE.DirectionalLight(0xff8c3a, 1.9);
+    sun.position.set(0.3, 0.22, -1).normalize();
     this.scene.add(sun);
 
     this.initGround();
     this.initPyramids(camera);
     this.initEdges();
     this.initTentacles(camera);
+    this.initMeteors();
     this.initEmbers(camera);
     this.initStars(camera);
   }
@@ -104,9 +127,9 @@ export class PyramidWorld extends World {
     const geo = new THREE.ConeGeometry(1, 1, 4);
     geo.translate(0, 0.5, 0);
     const mat = new THREE.MeshStandardMaterial({
-      color: 0x0d1f3c,
-      roughness: 0.7,
-      metalness: 0.02,
+      color: 0x16305c,
+      roughness: 0.65,
+      metalness: 0.04,
       flatShading: true,
     });
     this.pyramids = new THREE.InstancedMesh(geo, mat, PYRAMID_COUNT);
@@ -146,9 +169,9 @@ export class PyramidWorld extends World {
     this.writePyramid(i);
 
     tmpColor.setRGB(
-      range(this.rng, 0x08 / 255, 0x1a / 255),
-      range(this.rng, 0x12 / 255, 0x3a / 255),
-      range(this.rng, 0x26 / 255, 0x66 / 255),
+      range(this.rng, 0x10 / 255, 0x2a / 255),
+      range(this.rng, 0x20 / 255, 0x50 / 255),
+      range(this.rng, 0x3a / 255, 0x82 / 255),
     );
     this.pyramids.setColorAt(i, tmpColor);
     if (i < EDGE_COUNT) this.writeEdge(i);
@@ -211,8 +234,8 @@ export class PyramidWorld extends World {
     const geo = new THREE.PlaneGeometry(4000, 4000);
     geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshStandardMaterial({
-      color: 0x07030a,
-      roughness: 0.9,
+      color: 0x120d24,
+      roughness: 0.88,
       metalness: 0,
     });
     this.ground = new THREE.Mesh(geo, mat);
@@ -300,6 +323,139 @@ export class PyramidWorld extends World {
     }
     attr.needsUpdate = true;
     t.mesh.geometry.computeVertexNormals();
+  }
+
+  // ------------------------------------------------------------ meteoritos
+
+  private initMeteors(): void {
+    // Geometrias compartidas: cabeza (cometa) y onda de choque (aro plano)
+    const headGeo = new THREE.ConeGeometry(1.6, 8, 6);
+    const ringGeo = new THREE.RingGeometry(0.82, 1.0, 56);
+    ringGeo.rotateX(-Math.PI / 2); // tumbado sobre el suelo
+
+    for (let i = 0; i < METEOR_COUNT; i++) {
+      const head = new THREE.Mesh(
+        headGeo,
+        new THREE.MeshBasicMaterial({
+          color: 0xffd27a,
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          fog: false,
+        }),
+      );
+      head.frustumCulled = false;
+      head.visible = false;
+
+      const ring = new THREE.Mesh(
+        ringGeo,
+        new THREE.MeshBasicMaterial({
+          color: 0xff9a3c,
+          transparent: true,
+          opacity: 0,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          fog: false,
+        }),
+      );
+      ring.frustumCulled = false;
+      ring.visible = false;
+
+      const light = new THREE.PointLight(0xffb055, 0, 340, 2);
+
+      const meteor: Meteor = {
+        state: 'idle',
+        pos: new THREE.Vector3(),
+        vel: new THREE.Vector3(),
+        impact: new THREE.Vector3(),
+        // Arranque escalonado: los impactos no llegan todos a la vez
+        timer: i * 0.8 + range(this.rng, 0.3, 1.2),
+        light,
+        head,
+        ring,
+      };
+      this.meteors.push(meteor);
+      this.scene.add(head, ring, light);
+    }
+  }
+
+  /** Lanza un meteorito nuevo hacia un punto del suelo por delante. */
+  private spawnMeteor(m: Meteor, camera: THREE.PerspectiveCamera): void {
+    respawnAheadXZ(m.impact, camera, 90, PYRAMID_RADIUS * 0.6, Math.PI * 0.85, this.rng);
+    m.impact.y = 0;
+
+    const height = range(this.rng, 220, 360);
+    const ang = range(this.rng, 0, Math.PI * 2);
+    const spread = range(this.rng, 70, 170); // entra en diagonal
+    m.pos.set(
+      m.impact.x + Math.cos(ang) * spread,
+      height,
+      m.impact.z + Math.sin(ang) * spread,
+    );
+    const speed = range(this.rng, 170, 260);
+    m.vel.subVectors(m.impact, m.pos).normalize().multiplyScalar(speed);
+
+    // Tono calido, de ambar a blanco dorado
+    tmpColor.setHSL(range(this.rng, 0.03, 0.11), 0.85, 0.6);
+    m.head.material.color.copy(tmpColor);
+    m.ring.material.color.copy(tmpColor);
+    m.light.color.copy(tmpColor);
+
+    m.state = 'fall';
+    m.head.visible = true;
+    m.head.position.copy(m.pos);
+    m.light.position.copy(m.pos);
+    m.light.intensity = METEOR_FALL_GLOW;
+    m.ring.visible = false;
+    m.ring.material.opacity = 0;
+
+    tmpVec.copy(m.vel).normalize();
+    tmpQuat.setFromUnitVectors(WORLD_UP, tmpVec); // la punta apunta al avance
+    m.head.quaternion.copy(tmpQuat);
+  }
+
+  private updateMeteors(dt: number, camera: THREE.PerspectiveCamera): void {
+    for (let i = 0; i < METEOR_COUNT; i++) {
+      const m = this.meteors[i];
+
+      if (m.state === 'idle') {
+        m.timer -= dt;
+        if (m.timer <= 0) this.spawnMeteor(m, camera);
+        continue;
+      }
+
+      if (m.state === 'fall') {
+        m.pos.addScaledVector(m.vel, dt);
+        if (m.pos.y <= 0) {
+          // Impacto: el destello sustituye a la bola
+          m.state = 'flash';
+          m.timer = METEOR_FLASH_DUR;
+          m.head.visible = false;
+          m.ring.visible = true;
+          m.ring.position.set(m.impact.x, 0.5, m.impact.z);
+          m.light.position.set(m.impact.x, 6, m.impact.z);
+        } else {
+          m.head.position.copy(m.pos);
+          m.light.position.copy(m.pos);
+        }
+        continue;
+      }
+
+      // flash
+      m.timer -= dt;
+      const k = Math.max(0, m.timer / METEOR_FLASH_DUR); // 1 -> 0
+      m.light.intensity = METEOR_FLASH_PEAK * k * k;      // caida rapida
+      const radius = METEOR_RING_MAX * (1 - k);           // onda que crece
+      m.ring.scale.set(radius, radius, radius);
+      m.ring.material.opacity = k * 0.9;
+      if (m.timer <= 0) {
+        m.state = 'idle';
+        m.timer = range(this.rng, 0.6, 2.8);
+        m.light.intensity = 0;
+        m.ring.visible = false;
+      }
+    }
   }
 
   // --------------------------------------------------------------- ascuas
@@ -420,6 +576,8 @@ export class PyramidWorld extends World {
     if (colorsDirty && this.pyramids.instanceColor) this.pyramids.instanceColor.needsUpdate = true;
 
     for (let i = 0; i < EDGE_COUNT; i++) this.writeEdge(i);
+
+    this.updateMeteors(dt, camera);
 
     for (let i = 0; i < TENTACLE_COUNT; i++) {
       const tentacle = this.tentacles[i];
