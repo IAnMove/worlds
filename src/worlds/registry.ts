@@ -1,20 +1,30 @@
 import type { World } from '../core/World';
 import { AsteroidWorld } from './AsteroidWorld';
+import { BinaryStarWorld } from './BinaryStarWorld';
+import { BlackHoleWorld } from './BlackHoleWorld';
 import { CircuitWorld } from './CircuitWorld';
 import { ClockworkWorld } from './ClockworkWorld';
 import { CloudSeaWorld } from './CloudSeaWorld';
+import { CometWorld } from './CometWorld';
 import { DataCityWorld } from './DataCityWorld';
+import { DeepFieldWorld } from './DeepFieldWorld';
 import { FieldWorld } from './FieldWorld';
 import { GalaxyWorld } from './GalaxyWorld';
 import { KaleidoscopeWorld } from './KaleidoscopeWorld';
 import { MandelbulbWorld } from './MandelbulbWorld';
 import { MatrixWorld } from './MatrixWorld';
 import { MetaballWorld } from './MetaballWorld';
+import { MeteorStormWorld } from './MeteorStormWorld';
+import { NebulaWorld } from './NebulaWorld';
 import { NeuralWorld } from './NeuralWorld';
 import { OutrunWorld } from './OutrunWorld';
+import { RingDiveWorld } from './RingDiveWorld';
+import { SolarWorld } from './SolarWorld';
 import { PsychedelicWorld } from './PsychedelicWorld';
+import { PulsarWorld } from './PulsarWorld';
 import { PyramidWorld } from './PyramidWorld';
 import { SnowForestWorld } from './SnowForestWorld';
+import { StarForgeWorld } from './StarForgeWorld';
 import { SynthwaveWorld } from './SynthwaveWorld';
 import { VolcanoWorld } from './VolcanoWorld';
 import { WormholeWorld } from './WormholeWorld';
@@ -54,4 +64,14 @@ export const WORLDS: readonly WorldDefinition[] = [
   { id: 'lava-lamp', name: 'Lava Lamp', tagline: 'Metaballs iridiscentes que se funden', accent: '#ff77e0', create: () => new MetaballWorld() },
   { id: 'kaleidoscope', name: 'Kaleidoscope', tagline: 'Simetria radial hipnotica sin fin', accent: '#ff4d6d', create: () => new KaleidoscopeWorld() },
   { id: 'clockwork', name: 'Clockwork', tagline: 'Un mecanismo de engranajes infinito', accent: '#e0b050', create: () => new ClockworkWorld() },
+  { id: 'nebula', name: 'Emission Nebula', tagline: 'A traves de una nube de gas incandescente', accent: '#ff6ab0', create: () => new NebulaWorld() },
+  { id: 'black-hole', name: 'Event Horizon', tagline: 'Caida hacia un agujero negro', accent: '#ffb060', create: () => new BlackHoleWorld() },
+  { id: 'solar', name: 'Solar Surface', tagline: 'Vuelo rasante sobre el plasma del sol', accent: '#ff8a2a', create: () => new SolarWorld() },
+  { id: 'ring-dive', name: 'Ring Dive', tagline: 'Dentro de los anillos de un gigante gaseoso', accent: '#bcd6ff', create: () => new RingDiveWorld() },
+  { id: 'comet', name: 'Comet Swarm', tagline: 'Un enjambre de cometas con cola', accent: '#7fe0ff', create: () => new CometWorld() },
+  { id: 'binary-star', name: 'Binary Star', tagline: 'Dos soles orbitando un centro comun', accent: '#9ec8ff', create: () => new BinaryStarWorld() },
+  { id: 'pulsar', name: 'Pulsar', tagline: 'Un faro cosmico de luz giratoria', accent: '#8ac0ff', create: () => new PulsarWorld() },
+  { id: 'star-forge', name: 'Star Forge', tagline: 'Un vivero de estrellas entre pilares de polvo', accent: '#ff9ac0', create: () => new StarForgeWorld() },
+  { id: 'meteor-storm', name: 'Meteor Storm', tagline: 'Una tormenta de estrias a toda velocidad', accent: '#dfeaff', create: () => new MeteorStormWorld() },
+  { id: 'deep-field', name: 'Deep Field', tagline: 'A la deriva entre galaxias lejanas', accent: '#c0a0ff', create: () => new DeepFieldWorld() },
 ];

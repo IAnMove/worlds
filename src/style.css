@@ -50,13 +50,25 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4rem;
-  padding: 2rem;
+  /* safe center: centra cuando cabe, pero al desbordar alinea arriba y deja
+     hacer scroll en vez de recortar las tarjetas de abajo */
+  justify-content: safe center;
+  gap: 3rem;
+  padding: 3rem 2rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background:
     radial-gradient(ellipse at 50% -20%, #0a1430 0%, transparent 60%),
     var(--bg);
   transition: opacity 0.6s ease;
+}
+
+.menu::-webkit-scrollbar {
+  width: 10px;
+}
+.menu::-webkit-scrollbar-thumb {
+  background: rgba(120, 160, 220, 0.25);
+  border-radius: 6px;
 }
 
 .menu-header {
