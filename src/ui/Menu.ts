@@ -38,7 +38,7 @@ export class Menu {
     card.style.setProperty('--accent', def.accent);
     // El div .card-preview es el hueco donde la tarea 7 montara la preview animada
     card.innerHTML = `
-      <div class="card-preview" data-world="${def.id}"></div>
+      <div class="card-preview" data-world="${def.id}" style="background-image:url(previews/${def.id}.png)"></div>
       <div class="card-body">
         <h2 class="card-name">${def.name}</h2>
         <p class="card-tagline">${def.tagline}</p>

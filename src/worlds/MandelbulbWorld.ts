@@ -1,0 +1,104 @@
+import * as THREE from 'three';
+import { World, WorldConfig } from '../core/World';
+
+/**
+ * FRACTAL — inmersion en una red infinita de mandelbulbs (raymarching en un
+ * quad a pantalla completa). El vuelo mueve el origen del rayo por un dominio
+ * repetido; la orientacion de la camara apunta el rayo (mirar alrededor).
+ */
+
+const FS_VERT = /* glsl */ `
+varying vec2 vUv;
+void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+
+const FRAG = /* glsl */ `
+precision highp float;
+uniform vec2 uRes; uniform float uTime;
+uniform vec3 uRo, uFwd, uRight, uUp;
+varying vec2 vUv;
+
+float de(vec3 p){
+  p = mod(p, 10.0) - 5.0;              // lattice infinita
+  vec3 z = p; float dr = 1.0; float r = 0.0;
+  float power = 7.0 + sin(uTime*0.2)*1.0;
+  for(int i=0;i<5;i++){
+    r = length(z); if(r>2.0) break;
+    float theta = acos(z.z/r);
+    float phi = atan(z.y, z.x);
+    dr = pow(r, power-1.0)*power*dr + 1.0;
+    float zr = pow(r, power);
+    theta *= power; phi *= power;
+    z = zr*vec3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta)) + p;
+  }
+  return 0.5*log(max(r,1e-4))*r/dr;
+}
+
+void main(){
+  vec2 uv = vUv - 0.5; uv.x *= uRes.x/uRes.y;
+  vec3 rd = normalize(uFwd + uRight*uv.x*1.15 + uUp*uv.y*1.15);
+  vec3 ro = uRo;
+  float t = 0.0; float glow = 0.0; bool hit=false;
+  for(int i=0;i<64;i++){
+    vec3 p = ro + rd*t;
+    float d = de(p);
+    glow += 0.006/(1.0 + d*d*120.0);
+    if(d < 0.0015){ hit=true; break; }
+    t += d*0.6;                          // paso conservador (DE imperfecta)
+    if(t > 40.0) break;
+  }
+  vec3 col = vec3(0.02, 0.02, 0.05);
+  float shade = hit ? exp(-t*0.09) : 0.0;
+  vec3 a = vec3(0.1, 0.9, 0.7);
+  vec3 b = vec3(0.6, 0.2, 1.0);
+  col += mix(a, b, clamp(t*0.05,0.0,1.0)) * shade * 1.3;
+  col += vec3(0.2, 0.9, 0.8) * min(glow, 0.5);  // halo de proximidad (acotado)
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+const tmpFwd = new THREE.Vector3();
+const tmpRight = new THREE.Vector3();
+const tmpUp = new THREE.Vector3();
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
+
+export class MandelbulbWorld extends World {
+  readonly config: WorldConfig = {
+    flySpeed: 12,
+    clearColor: 0x02010a,
+    fogDensity: 0.0001,
+    bloom: { strength: 1.0, radius: 0.8, threshold: 0.45 },
+    cameraStart: new THREE.Vector3(0, 0, 0),
+  };
+
+  private uniforms!: { [k: string]: THREE.IUniform };
+
+  init(): void {
+    this.uniforms = {
+      uRes: { value: new THREE.Vector2(1, 1) },
+      uTime: { value: 0 },
+      uRo: { value: new THREE.Vector3() },
+      uFwd: { value: new THREE.Vector3(0, 0, -1) },
+      uRight: { value: new THREE.Vector3(1, 0, 0) },
+      uUp: { value: new THREE.Vector3(0, 1, 0) },
+    };
+    const quad = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.ShaderMaterial({ vertexShader: FS_VERT, fragmentShader: FRAG, uniforms: this.uniforms, depthTest: false, depthWrite: false }),
+    );
+    quad.frustumCulled = false;
+    quad.renderOrder = -1;
+    this.scene.add(quad);
+  }
+
+  update(_dt: number, elapsed: number, camera: THREE.PerspectiveCamera): void {
+    this.uniforms.uTime.value = elapsed;
+    (this.uniforms.uRes.value as THREE.Vector2).set(window.innerWidth, window.innerHeight);
+    camera.getWorldDirection(tmpFwd);
+    tmpRight.crossVectors(tmpFwd, WORLD_UP).normalize();
+    if (tmpRight.lengthSq() < 0.01) tmpRight.set(1, 0, 0);
+    tmpUp.crossVectors(tmpRight, tmpFwd).normalize();
+    (this.uniforms.uRo.value as THREE.Vector3).copy(camera.position);
+    (this.uniforms.uFwd.value as THREE.Vector3).copy(tmpFwd);
+    (this.uniforms.uRight.value as THREE.Vector3).copy(tmpRight);
+    (this.uniforms.uUp.value as THREE.Vector3).copy(tmpUp);
+  }
+}

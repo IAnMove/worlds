@@ -116,21 +116,33 @@ body {
 /* Preview placeholder: degradado animado con el acento del mundo.
    La tarea 7 monta aqui una mini escena WebGL animada. */
 .card-preview {
+  position: relative;
   height: 150px;
-  background:
-    linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 18%, transparent) 50%, transparent 70%),
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 80%);
-  background-size: 300% 100%, 100% 100%;
-  animation: preview-sweep 4s linear infinite;
+  /* La miniatura renderizada del mundo (public/previews/<id>.png) */
+  background-color: #05060c;
+  background-size: cover;
+  background-position: center;
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  overflow: hidden;
+}
+
+/* Reflejo animado con el color de acento que barre por encima de la imagen */
+.card-preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 22%, transparent) 50%, transparent 70%);
+  background-size: 300% 100%;
+  animation: preview-sweep 4s linear infinite;
+  mix-blend-mode: screen;
 }
 
 @keyframes preview-sweep {
   from {
-    background-position: 150% 0, 0 0;
+    background-position: 150% 0;
   }
   to {
-    background-position: -150% 0, 0 0;
+    background-position: -150% 0;
   }
 }
 
