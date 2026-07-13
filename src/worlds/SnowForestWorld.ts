@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { World, WorldConfig } from '../core/World';
 import { createRng, range } from '../core/utils/random';
 import { distanceXZ, respawnAheadXZ, wrapAround } from '../core/utils/recycle';
+import { makeGlowSprite } from './utils/sprites';
 
 /**
  * SNOW FOREST — bosque de pinos nevado bajo la luna. Los pinos son un
@@ -26,7 +27,7 @@ export class SnowForestWorld extends World {
     flySpeed: 26,
     clearColor: 0x0a1226,
     fogDensity: 0.006,
-    bloom: { strength: 0.7, radius: 0.8, threshold: 0.55 },
+    bloom: { strength: 0.55, radius: 0.7, threshold: 0.7 },
     cameraStart: new THREE.Vector3(0, 16, 0),
     bounds: { minY: 8, maxY: 90, margin: 20 },
   };
@@ -38,6 +39,7 @@ export class SnowForestWorld extends World {
   private snow!: THREE.Points;
   private snowPos!: Float32Array;
   private moon!: THREE.Mesh;
+  private moonHalo!: THREE.Sprite;
 
   init(camera: THREE.PerspectiveCamera): void {
     this.scene.add(new THREE.HemisphereLight(0x3a4a7a, 0x0a1020, 0.7));
@@ -47,7 +49,7 @@ export class SnowForestWorld extends World {
 
     const gg = new THREE.PlaneGeometry(3000, 3000);
     gg.rotateX(-Math.PI / 2);
-    this.ground = new THREE.Mesh(gg, new THREE.MeshStandardMaterial({ color: 0x2a3a5a, roughness: 1, metalness: 0 }));
+    this.ground = new THREE.Mesh(gg, new THREE.MeshStandardMaterial({ color: 0x3c4f78, roughness: 1, metalness: 0, emissive: 0x0e1830, emissiveIntensity: 0.5 }));
     this.ground.frustumCulled = false;
     this.scene.add(this.ground);
 
@@ -73,13 +75,21 @@ export class SnowForestWorld extends World {
     }
     const sgeo = new THREE.BufferGeometry();
     sgeo.setAttribute('position', new THREE.BufferAttribute(this.snowPos, 3));
-    this.snow = new THREE.Points(sgeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.9, transparent: true, opacity: 0.9, depthWrite: false, fog: false }));
+    this.snow = new THREE.Points(sgeo, new THREE.PointsMaterial({ map: makeGlowSprite(64, 0.5), color: 0xffffff, size: 1.1, transparent: true, opacity: 0.85, depthWrite: false, fog: false }));
     this.snow.frustumCulled = false;
     this.scene.add(this.snow);
 
     this.moon = new THREE.Mesh(new THREE.SphereGeometry(40, 24, 24), new THREE.MeshBasicMaterial({ color: 0xeaf2ff, fog: false }));
     this.moon.frustumCulled = false;
     this.scene.add(this.moon);
+
+    // Halo de la luna: sprite aditivo grande detras
+    this.moonHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: makeGlowSprite(128, 0.15), color: 0x9ab8e8, transparent: true, opacity: 0.55,
+      blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+    }));
+    this.moonHalo.scale.setScalar(240);
+    this.scene.add(this.moonHalo);
   }
 
   private placeTree(t: Tree, camera: THREE.PerspectiveCamera, initial: boolean): void {
@@ -99,6 +109,7 @@ export class SnowForestWorld extends World {
   update(dt: number, _elapsed: number, camera: THREE.PerspectiveCamera): void {
     this.ground.position.set(camera.position.x, 0, camera.position.z);
     this.moon.position.set(camera.position.x + 240, camera.position.y + 300, camera.position.z - 500);
+    this.moonHalo.position.copy(this.moon.position);
 
     let dirty = false;
     for (let i = 0; i < TREE_COUNT; i++) {

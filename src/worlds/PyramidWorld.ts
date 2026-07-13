@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { World, WorldConfig } from '../core/World';
 import { createRng, range } from '../core/utils/random';
 import { distanceXZ, isBehind, respawnAheadXZ, wrapAround } from '../core/utils/recycle';
+import { FIRESKY_VERT, FIRESKY_FRAG } from './shaders/fireSky';
 
 /**
  * PYRAMID DUSK — desierto azul oscuro con piramides, fuego y formas cosmicas.
@@ -101,17 +102,20 @@ export class PyramidWorld extends World {
   private readonly emberRise = new Float32Array(EMBER_COUNT);
 
   private stars!: THREE.Points;
+  private sky!: THREE.Mesh;
+  private skyU!: { [k: string]: THREE.IUniform };
 
   init(camera: THREE.PerspectiveCamera): void {
     // Luz de cielo/suelo: da volumen sin aplanar la escena
-    this.scene.add(new THREE.HemisphereLight(0x3a4c8c, 0x241436, 0.85));
-    this.scene.add(new THREE.AmbientLight(0x1c2a5a, 0.45));
+    this.scene.add(new THREE.HemisphereLight(0x3a4c8c, 0x241436, 1.05));
+    this.scene.add(new THREE.AmbientLight(0x1c2a5a, 0.5));
 
     // Sol de ocaso rasante, mas presente que antes
-    const sun = new THREE.DirectionalLight(0xff8c3a, 1.9);
+    const sun = new THREE.DirectionalLight(0xff8c3a, 2.2);
     sun.position.set(0.3, 0.22, -1).normalize();
     this.scene.add(sun);
 
+    this.initSky(camera);
     this.initGround();
     this.initPyramids(camera);
     this.initEdges();
@@ -494,6 +498,26 @@ export class PyramidWorld extends World {
     this.scene.add(this.embers);
   }
 
+  // ------------------------------------------------------------------ cielo
+
+  private initSky(camera: THREE.PerspectiveCamera): void {
+    this.skyU = { uTime: { value: 0 } };
+    this.sky = new THREE.Mesh(
+      new THREE.SphereGeometry(520, 48, 32),
+      new THREE.ShaderMaterial({
+        vertexShader: FIRESKY_VERT,
+        fragmentShader: FIRESKY_FRAG,
+        uniforms: this.skyU,
+        side: THREE.BackSide,
+        depthWrite: false,
+      }),
+    );
+    this.sky.renderOrder = -10;
+    this.sky.frustumCulled = false;
+    this.sky.position.set(camera.position.x, 0, camera.position.z);
+    this.scene.add(this.sky);
+  }
+
   // -------------------------------------------------------------- estrellas
 
   private initStars(camera: THREE.PerspectiveCamera): void {
@@ -562,6 +586,8 @@ export class PyramidWorld extends World {
       Math.round(camera.position.z / 200) * 200,
     );
     this.stars.position.set(camera.position.x, 0, camera.position.z);
+    this.sky.position.set(camera.position.x, 0, camera.position.z);
+    this.skyU.uTime.value = elapsed;
 
     let pyramidsDirty = false;
     let colorsDirty = false;

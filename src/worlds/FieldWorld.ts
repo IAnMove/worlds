@@ -14,9 +14,10 @@ const FIELD_HALF = 130; // media caja de siembra alrededor de la camara
 const BLADE_VERT = /* glsl */ `
 uniform float uTime;
 attribute float aPhase;
-varying float vH;
+varying float vH; varying float vTint;
 void main(){
   vH = position.y / 3.0; // altura normalizada: 0 base, 1 punta (plano de 3u)
+  vTint = 0.8 + 0.2*sin(aPhase*3.7);
   vec4 world = instanceMatrix * vec4(position, 1.0);
   float sway = sin(uTime*1.4 + aPhase + world.x*0.05 + world.z*0.05);
   float bend = sway * vH * vH * 2.4; // se dobla mas cuanto mas arriba
@@ -26,20 +27,20 @@ void main(){
 }`;
 
 const BLADE_FRAG = /* glsl */ `
-varying float vH;
+varying float vH; varying float vTint;
 void main(){
-  vec3 base = vec3(0.55, 0.32, 0.08);
-  vec3 tip = vec3(1.0, 0.82, 0.35);
-  gl_FragColor = vec4(mix(base, tip, vH), 1.0);
+  vec3 base = vec3(0.40, 0.22, 0.05);
+  vec3 tip = vec3(0.98, 0.74, 0.26);
+  gl_FragColor = vec4(mix(base, tip, vH) * vTint, 1.0);
 }`;
 
 const SKY_VERT = /* glsl */ `varying vec3 vDir; void main(){ vDir=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`;
 const SKY_FRAG = /* glsl */ `
 uniform vec3 uHorizon; uniform vec3 uZenith; uniform vec3 uSun; varying vec3 vDir;
 void main(){ vec3 d=normalize(vDir); float h=clamp(d.y*0.5+0.5,0.0,1.0);
-  vec3 col=mix(uHorizon,uZenith,pow(h,0.8));
+  vec3 col=mix(uHorizon,uZenith,pow(h,0.75));
   vec3 sd=normalize(vec3(0.1,0.05,-1.0)); float s=distance(d,sd);
-  col=mix(col,uSun,smoothstep(0.2,0.06,s)); col+=uSun*smoothstep(0.8,0.1,s)*0.4;
+  col=mix(col,uSun,smoothstep(0.10,0.035,s)); col+=uSun*smoothstep(0.7,0.08,s)*0.22;
   gl_FragColor=vec4(col,1.0); }`;
 
 const tmpMatrix = new THREE.Matrix4();
@@ -51,9 +52,9 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0);
 export class FieldWorld extends World {
   readonly config: WorldConfig = {
     flySpeed: 22,
-    clearColor: 0xffcf8a,
+    clearColor: 0xf2b06a,
     fogDensity: 0.004,
-    bloom: { strength: 0.6, radius: 0.8, threshold: 0.65 },
+    bloom: { strength: 0.45, radius: 0.7, threshold: 0.85 },
     cameraStart: new THREE.Vector3(0, 6, 0),
     bounds: { minY: 3, maxY: 30, margin: 12 },
   };
@@ -97,7 +98,7 @@ export class FieldWorld extends World {
 
     this.sky = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), new THREE.ShaderMaterial({
       vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, side: THREE.BackSide, depthWrite: false,
-      uniforms: { uHorizon: { value: new THREE.Color(0xffd89a) }, uZenith: { value: new THREE.Color(0x5a7abf) }, uSun: { value: new THREE.Color(0xfff0cf) } },
+      uniforms: { uHorizon: { value: new THREE.Color(0xffc27a) }, uZenith: { value: new THREE.Color(0x46639f) }, uSun: { value: new THREE.Color(0xfff0cf) } },
     }));
     this.sky.frustumCulled = false;
     this.scene.add(this.sky);

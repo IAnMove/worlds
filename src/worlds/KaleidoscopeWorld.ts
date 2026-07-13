@@ -23,17 +23,25 @@ void main(){
   float r = length(uv);
   float a = atan(uv.y, uv.x) + uRot;
   // plegado en N sectores (simetria de espejo)
-  const float N = 8.0;
+  const float N = 10.0;
   a = mod(a, 6.28318/N);
   a = abs(a - 3.14159/N);
   vec2 k = vec2(cos(a), sin(a)) * r;
   // patron animado
-  vec2 p = k*3.5 + uPan + vec2(uTime*0.1, 0.0);
-  float n = fbm(p + fbm(p*1.5 - uTime*0.05));
-  float rings = 0.5+0.5*sin(r*24.0 - uTime*1.5);
-  vec3 col = 0.5+0.5*cos(vec3(0.0,2.1,4.2) + n*5.0 + uTime*0.3);
-  col *= mix(0.6, 1.2, rings);
-  col *= smoothstep(0.9, 0.1, r);      // vineta suave
+  vec2 p = k*4.0 + uPan + vec2(uTime*0.06, 0.0);
+  float n = fbm(p + fbm(p*1.6 - uTime*0.04));
+  // vidriera: bandas discretas del ruido = celdas de color con borde oscuro
+  float bands = fract(n*5.0 + uTime*0.04);
+  float cellId = floor(n*5.0 + uTime*0.04);
+  float bd = min(bands, 1.0-bands);              // distancia al borde de la celda
+  float lead = smoothstep(0.0, 0.14, bd);        // 0 en el borde = linea oscura
+  vec3 col = 0.5+0.5*cos(vec3(0.0,2.1,4.2) + cellId*1.7 + r*3.0 + uTime*0.25);
+  col = pow(col, vec3(1.6));                     // tonos joya, saturados
+  float rings = 0.5+0.5*sin(r*26.0 - uTime*1.2 + n*4.0);
+  col *= (0.12 + 0.88*lead) * (0.65 + 0.35*rings);
+  // filamento brillante dentro de la linea de plomo (esto alimenta el bloom)
+  col += vec3(1.0, 0.92, 0.8) * smoothstep(0.05, 0.0, bd) * 0.55;
+  col *= smoothstep(1.05, 0.25, r);              // vineta suave
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -44,7 +52,7 @@ export class KaleidoscopeWorld extends World {
     flySpeed: 6,
     clearColor: 0x000000,
     fogDensity: 0.0001,
-    bloom: { strength: 0.8, radius: 0.8, threshold: 0.55 },
+    bloom: { strength: 0.5, radius: 0.55, threshold: 0.75 },
     cameraStart: new THREE.Vector3(0, 0, 0),
   };
 

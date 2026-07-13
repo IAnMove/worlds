@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { World, WorldConfig } from '../core/World';
 import { createRng, range } from '../core/utils/random';
 import { distanceXZ, respawnAheadXZ, wrapAround } from '../core/utils/recycle';
+import { makeGlowSprite } from './utils/sprites';
 
 /**
  * VOLCANO — vuelo sobre un mar de lava con espiras de roca y erupciones que
@@ -29,11 +30,13 @@ float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<4;i++){ v+=a*noise(p); p=p*2
 void main(){
   vec2 uv = vWorld.xz*0.01;
   float n = fbm(uv + vec2(0.0, uTime*0.08));
-  float crust = smoothstep(0.35,0.55,n);          // roca oscura solida
-  float glow = pow(1.0-crust, 2.0);                // grietas incandescentes
-  vec3 rock = vec3(0.05,0.02,0.02);
-  vec3 hot = mix(vec3(1.0,0.25,0.03), vec3(1.0,0.85,0.3), glow);
-  vec3 col = mix(hot*1.4, rock, crust);
+  float crust = smoothstep(0.36,0.54,n);          // roca oscura solida
+  float glow = pow(1.0-crust, 1.6);                // grietas incandescentes
+  vec3 rock = vec3(0.05,0.02,0.015);
+  vec3 hot = mix(vec3(1.0,0.22,0.02), vec3(1.0,0.85,0.3), glow);
+  // variacion a gran escala: zonas del rio mas vivas y otras casi apagadas
+  float zone = 0.6 + 0.6*noise(uv*0.13 + vec2(uTime*0.01, 0.0));
+  vec3 col = mix(hot*1.6*zone, rock, crust);
   float d = distance(vWorld, uCamPos);
   float fog = 1.0 - exp(-pow(d*uFogDensity,2.0));
   col = mix(col, uFog, fog);
@@ -53,7 +56,7 @@ export class VolcanoWorld extends World {
     flySpeed: 32,
     clearColor: 0x1a0805,
     fogDensity: 0.0055,
-    bloom: { strength: 1.0, radius: 0.75, threshold: 0.5 },
+    bloom: { strength: 0.8, radius: 0.65, threshold: 0.6 },
     cameraStart: new THREE.Vector3(0, 20, 0),
     bounds: { minY: 10, maxY: 120, margin: 22 },
   };
@@ -105,7 +108,7 @@ export class VolcanoWorld extends World {
     }
     const egeo = new THREE.BufferGeometry();
     egeo.setAttribute('position', new THREE.BufferAttribute(this.emberPos, 3));
-    this.embers = new THREE.Points(egeo, new THREE.PointsMaterial({ color: 0xff8a3a, size: 1.5, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    this.embers = new THREE.Points(egeo, new THREE.PointsMaterial({ map: makeGlowSprite(), color: 0xff8a3a, size: 1.8, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     this.embers.frustumCulled = false;
     this.scene.add(this.embers);
 

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { World, WorldConfig } from '../core/World';
 import { createRng, range } from '../core/utils/random';
+import { makeGlowSprite } from './utils/sprites';
 
 /**
  * WORMHOLE — caida infinita por un agujero de gusano. El tubo va pegado a la
@@ -31,10 +32,13 @@ void main() {
   // Bandas espirales de energia
   float swirl = sin(u + v * 2.0 + uTime) * 0.5 + 0.5;
   float rings = smoothstep(0.75, 1.0, sin(v * 3.0) * 0.5 + 0.5);
-  vec3 a = vec3(0.28, 0.08, 0.7);
-  vec3 b = vec3(0.08, 0.55, 0.75);
-  vec3 col = mix(a, b, swirl) * (0.14 + rings * 0.8);
-  col += vec3(0.5, 0.25, 0.9) * pow(swirl, 4.0) * 0.4;
+  vec3 a = vec3(0.16, 0.03, 0.45);
+  vec3 b = vec3(0.02, 0.30, 0.50);
+  vec3 col = mix(a, b, swirl) * (0.10 + rings * 0.55);
+  // estrias espirales finas y brillantes que corren por la pared
+  float streak = pow(0.5 + 0.5*sin(u*3.0 - v*4.0 + uTime*1.5), 12.0);
+  col += vec3(0.55, 0.35, 1.0) * streak * 0.9;
+  col += vec3(0.5, 0.25, 0.9) * pow(swirl, 6.0) * 0.25;
   // Se oscurece hacia el fondo del tubo (lejos en v)
   float depth = clamp(vUv.y, 0.0, 1.0);
   col = mix(uFog, col, smoothstep(0.0, 0.45, depth));
@@ -50,7 +54,7 @@ export class WormholeWorld extends World {
     flySpeed: 60,
     clearColor: 0x03010a,
     fogDensity: 0.004,
-    bloom: { strength: 0.85, radius: 0.8, threshold: 0.55 },
+    bloom: { strength: 0.55, radius: 0.65, threshold: 0.75 },
     cameraStart: new THREE.Vector3(0, 0, 0),
   };
 
@@ -87,7 +91,7 @@ export class WormholeWorld extends World {
     const sgeo = new THREE.BufferGeometry();
     sgeo.setAttribute('position', new THREE.BufferAttribute(this.starPositions, 3));
     this.stars = new THREE.Points(sgeo, new THREE.PointsMaterial({
-      color: 0xaad4ff, size: 1.4, transparent: true, opacity: 0.9,
+      map: makeGlowSprite(), color: 0xaad4ff, size: 1.6, transparent: true, opacity: 0.8,
       blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
     }));
     this.stars.frustumCulled = false;

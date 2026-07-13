@@ -24,9 +24,10 @@ void main(){
   float trace = line(uv/24.0);
   col += vec3(0.0, 0.5, 0.3) * fine * 0.15;
   col += vec3(0.1, 0.9, 0.5) * trace * 0.5;     // pistas de cobre
-  // Pulsos de datos: viajan a lo largo de las pistas verticales
-  float pulse = smoothstep(0.9, 1.0, sin(uv.y*0.25 - uTime*4.0)) * trace;
-  col += vec3(0.4, 1.0, 0.7) * pulse;
+  // Pulsos de datos: frentes de onda que recorren las pistas en ambos ejes
+  float pulseY = smoothstep(0.90, 1.0, sin(uv.y*0.26 - uTime*3.2));
+  float pulseX = smoothstep(0.90, 1.0, sin(uv.x*0.22 + uTime*2.5));
+  col += vec3(0.35, 1.0, 0.65) * (pulseY + pulseX) * trace * 1.3;
   // Pads: puntos brillantes en la interseccion de la rejilla gruesa
   vec2 pad = abs(fract(uv/24.0)-0.5);
   float dot = smoothstep(0.06, 0.0, length(pad));
@@ -39,9 +40,11 @@ void main(){
 const tmpMatrix = new THREE.Matrix4();
 const tmpQuat = new THREE.Quaternion();
 const tmpScale = new THREE.Vector3();
+const tmpPos = new THREE.Vector3();
 const tmpColor = new THREE.Color();
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
-const CHIP_COLORS = [0x0a0a0a, 0x141414, 0x1a1408];
+const CHIP_COLORS = [0x1a221c, 0x242426, 0x2a2412];
+const LED_COLORS = [0x66ff99, 0xffc24d, 0x5ad8ff, 0xff5a5a];
 
 interface Chip { pos: THREE.Vector3; w: number; d: number; h: number; yaw: number; }
 
@@ -59,6 +62,7 @@ export class CircuitWorld extends World {
   private board!: THREE.Mesh;
   private boardU!: { [k: string]: THREE.IUniform };
   private chips!: THREE.InstancedMesh;
+  private leds!: THREE.InstancedMesh;
   private readonly data: Chip[] = [];
 
   init(camera: THREE.PerspectiveCamera): void {
@@ -76,20 +80,37 @@ export class CircuitWorld extends World {
 
     const geo = new THREE.BoxGeometry(1, 1, 1);
     geo.translate(0, 0.5, 0);
-    this.chips = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.3, flatShading: true }), CHIP_COUNT);
+    this.chips = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.3, flatShading: true, emissive: 0x0a1410, emissiveIntensity: 0.7 }), CHIP_COUNT);
     this.chips.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.chips.frustumCulled = false;
+
+    // LED por chip: caja pequena emisiva en una esquina de la tapa
+    const ledGeo = new THREE.BoxGeometry(1, 1, 1);
+    ledGeo.translate(0, 0.5, 0);
+    this.leds = new THREE.InstancedMesh(ledGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }), CHIP_COUNT);
+    this.leds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.leds.frustumCulled = false;
+
     for (let i = 0; i < CHIP_COUNT; i++) {
       const c: Chip = { pos: new THREE.Vector3(), w: 0, d: 0, h: 0, yaw: 0 };
       this.data.push(c);
       this.placeChip(c, camera, true);
       this.writeChip(i, c);
-      tmpColor.setHex(pick(this.rng, CHIP_COLORS));
-      this.chips.setColorAt(i, tmpColor);
+      this.paintChip(i);
     }
     this.chips.instanceMatrix.needsUpdate = true;
+    this.leds.instanceMatrix.needsUpdate = true;
     if (this.chips.instanceColor) this.chips.instanceColor.needsUpdate = true;
+    if (this.leds.instanceColor) this.leds.instanceColor.needsUpdate = true;
     this.scene.add(this.chips);
+    this.scene.add(this.leds);
+  }
+
+  private paintChip(i: number): void {
+    tmpColor.setHex(pick(this.rng, CHIP_COLORS));
+    this.chips.setColorAt(i, tmpColor);
+    tmpColor.setHex(pick(this.rng, LED_COLORS));
+    this.leds.setColorAt(i, tmpColor);
   }
 
   private placeChip(c: Chip, camera: THREE.PerspectiveCamera, initial: boolean): void {
@@ -106,6 +127,10 @@ export class CircuitWorld extends World {
     tmpScale.set(c.w, c.h, c.d);
     tmpMatrix.compose(c.pos, tmpQuat, tmpScale);
     this.chips.setMatrixAt(i, tmpMatrix);
+    // LED en una esquina de la tapa, girado con el chip
+    tmpPos.set(c.w * 0.3, c.h, c.d * 0.3).applyQuaternion(tmpQuat).add(c.pos);
+    tmpMatrix.compose(tmpPos, tmpQuat, tmpScale.set(2.0, 0.9, 2.0));
+    this.leds.setMatrixAt(i, tmpMatrix);
   }
 
   update(_dt: number, elapsed: number, camera: THREE.PerspectiveCamera): void {
@@ -115,8 +140,18 @@ export class CircuitWorld extends World {
 
     let dirty = false;
     for (let i = 0; i < CHIP_COUNT; i++) {
-      if (distanceXZ(this.data[i].pos, camera) > CHIP_RADIUS) { this.placeChip(this.data[i], camera, false); this.writeChip(i, this.data[i]); dirty = true; }
+      if (distanceXZ(this.data[i].pos, camera) > CHIP_RADIUS) {
+        this.placeChip(this.data[i], camera, false);
+        this.writeChip(i, this.data[i]);
+        this.paintChip(i);
+        dirty = true;
+      }
     }
-    if (dirty) this.chips.instanceMatrix.needsUpdate = true;
+    if (dirty) {
+      this.chips.instanceMatrix.needsUpdate = true;
+      this.leds.instanceMatrix.needsUpdate = true;
+      if (this.chips.instanceColor) this.chips.instanceColor.needsUpdate = true;
+      if (this.leds.instanceColor) this.leds.instanceColor.needsUpdate = true;
+    }
   }
 }
