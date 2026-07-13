@@ -25,13 +25,20 @@ void main(){
   vec3 ro = vec3(0.0);
   float t=0.0; bool hit=false;
   for(int i=0;i<56;i++){ vec3 p=ro+rd*t; float d=de(p); if(d<0.002){hit=true;break;} t+=d; if(t>30.0) break; }
-  vec3 col = vec3(0.03, 0.01, 0.05);
+  // fondo: degradado vertical purpura profundo con halo central
+  float bgv = clamp(uv.y+0.5, 0.0, 1.0);
+  vec3 col = mix(vec3(0.10,0.015,0.14), vec3(0.012,0.004,0.03), bgv);
+  col += vec3(0.10,0.02,0.14) * exp(-3.5*length(uv));
   if(hit){
     vec3 p=ro+rd*t; vec3 n=normal(p);
-    float fres = pow(1.0-max(dot(n,-rd),0.0), 2.0);
-    // color iridiscente segun la normal
+    float fres = pow(1.0-max(dot(n,-rd),0.0), 3.0);
+    // color iridiscente segun la normal, saturado y con luz lateral
     vec3 ir = 0.5+0.5*cos(vec3(0.0,2.0,4.0) + n.x*3.0 + n.y*2.0 + uTime*0.5);
-    col = ir*0.7 + fres*vec3(1.0,0.6,1.0);
+    ir = pow(ir, vec3(1.9));
+    float diff = 0.25 + 0.75*max(dot(n, normalize(vec3(0.5,0.8,0.3))), 0.0);
+    col = ir * diff;
+    col += fres * vec3(1.0,0.45,0.95) * 0.9;                       // borde magenta
+    col += pow(max(dot(reflect(rd,n), normalize(vec3(0.5,0.8,0.3))),0.0), 24.0) * 0.8; // brillo especular
   }
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -46,7 +53,7 @@ export class MetaballWorld extends World {
     flySpeed: 8,
     clearColor: 0x08020f,
     fogDensity: 0.0001,
-    bloom: { strength: 0.9, radius: 0.85, threshold: 0.5 },
+    bloom: { strength: 0.55, radius: 0.7, threshold: 0.7 },
     cameraStart: new THREE.Vector3(0, 0, 0),
   };
 

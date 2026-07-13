@@ -17,7 +17,9 @@ const root = resolve(__dirname, '..');
 const PORT = 4188;
 const OUT = resolve(root, 'public/previews');
 const CHROME = process.env.CHROME_PATH
-  || `${process.env.HOME}/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome`;
+  || `${process.env.HOME}/.cache/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell`;
+// En servidores sin GPU, WebGL necesita el backend software de ANGLE.
+const GL_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 
 // Lee los ids de mundos del registry sin compilar TS (regex simple)
 const registry = readFileSync(resolve(root, 'src/worlds/registry.ts'), 'utf8');
@@ -41,8 +43,12 @@ const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--stric
 try {
   await waitForServer(`http://localhost:${PORT}/`);
   mkdirSync(OUT, { recursive: true });
-  const browser = await chromium.launch({ executablePath: CHROME });
+  const browser = await chromium.launch({ executablePath: CHROME, args: GL_ARGS });
   const page = await browser.newPage({ viewport: { width: 640, height: 400 }, deviceScaleFactor: 1 });
+  // La app captura el puntero al entrar a un mundo; el stub evita que se cuelgue.
+  await page.addInitScript(() => {
+    HTMLCanvasElement.prototype.requestPointerLock = () => Promise.resolve();
+  });
 
   for (const id of ids) {
     await page.goto(`http://localhost:${PORT}/?shot=${id}`, { waitUntil: 'load' });

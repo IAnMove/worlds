@@ -33,25 +33,38 @@ float de(vec3 p){
   return 0.5*log(max(r,1e-4))*r/dr;
 }
 
+float hash1(vec3 c){ return fract(sin(dot(c, vec3(12.9898, 78.233, 37.719)))*43758.5453); }
+
 void main(){
   vec2 uv = vUv - 0.5; uv.x *= uRes.x/uRes.y;
   vec3 rd = normalize(uFwd + uRight*uv.x*1.15 + uUp*uv.y*1.15);
   vec3 ro = uRo;
-  float t = 0.0; float glow = 0.0; bool hit=false;
+  float t = 0.0; float glow = 0.0; bool hit=false; float steps = 0.0;
   for(int i=0;i<64;i++){
     vec3 p = ro + rd*t;
     float d = de(p);
     glow += 0.006/(1.0 + d*d*120.0);
     if(d < 0.0015){ hit=true; break; }
     t += d*0.6;                          // paso conservador (DE imperfecta)
+    steps += 1.0;
     if(t > 40.0) break;
   }
-  vec3 col = vec3(0.02, 0.02, 0.05);
-  float shade = hit ? exp(-t*0.09) : 0.0;
-  vec3 a = vec3(0.1, 0.9, 0.7);
-  vec3 b = vec3(0.6, 0.2, 1.0);
-  col += mix(a, b, clamp(t*0.05,0.0,1.0)) * shade * 1.3;
-  col += vec3(0.2, 0.9, 0.8) * min(glow, 0.5);  // halo de proximidad (acotado)
+  // fondo: gradiente vertical tenue
+  vec3 col = mix(vec3(0.012, 0.010, 0.045), vec3(0.030, 0.015, 0.075), rd.y*0.5+0.5);
+  if(hit){
+    float shade = exp(-t*0.09);
+    float ao = 1.0 - steps/64.0;         // oclusion barata: mas pasos = mas hendidura
+    ao = ao*ao;
+    // tinte propio por celda de la reticula: cada bulbo tiene su color
+    float ch = hash1(floor((ro + rd*t)/10.0));
+    vec3 a = vec3(0.08, 0.85, 0.65);
+    vec3 b = vec3(0.60, 0.20, 1.00);
+    vec3 c = vec3(1.00, 0.55, 0.25);
+    vec3 tint = mix(a, b, ch);
+    tint = mix(tint, c, smoothstep(0.75, 1.0, ch));
+    col = tint * shade * ao * 1.5;
+  }
+  col += vec3(0.15, 0.7, 0.65) * min(glow, 0.35);  // halo de proximidad (acotado)
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -65,7 +78,7 @@ export class MandelbulbWorld extends World {
     flySpeed: 12,
     clearColor: 0x02010a,
     fogDensity: 0.0001,
-    bloom: { strength: 1.0, radius: 0.8, threshold: 0.45 },
+    bloom: { strength: 0.7, radius: 0.7, threshold: 0.6 },
     cameraStart: new THREE.Vector3(0, 0, 0),
   };
 

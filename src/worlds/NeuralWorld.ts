@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { World, WorldConfig } from '../core/World';
 import { createRng, range, rangeInt } from '../core/utils/random';
+import { makeGlowSprite } from './utils/sprites';
 
 /**
  * NEURAL NET — vuelas dentro de una red neuronal. Los nodos viven en el
@@ -26,7 +27,7 @@ export class NeuralWorld extends World {
     flySpeed: 10,
     clearColor: 0x03060f,
     fogDensity: 0.0025,
-    bloom: { strength: 0.85, radius: 0.85, threshold: 0.55 },
+    bloom: { strength: 0.55, radius: 0.7, threshold: 0.7 },
     cameraStart: new THREE.Vector3(0, 0, 0),
   };
 
@@ -58,7 +59,7 @@ export class NeuralWorld extends World {
     // Nodos como esferas instanciadas emisivas
     const nodeMesh = new THREE.InstancedMesh(
       new THREE.SphereGeometry(1, 10, 10),
-      new THREE.MeshBasicMaterial({ color: 0x4aa8d8, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
+      new THREE.MeshBasicMaterial({ color: 0x2f7fb8, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
       NODE_COUNT,
     );
     nodeMesh.frustumCulled = false;
@@ -83,7 +84,7 @@ export class NeuralWorld extends World {
     }
     const lgeo = new THREE.BufferGeometry();
     lgeo.setAttribute('position', new THREE.BufferAttribute(this.linePositions, 3));
-    this.lines = new THREE.LineSegments(lgeo, new THREE.LineBasicMaterial({ color: 0x1a6aa0, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    this.lines = new THREE.LineSegments(lgeo, new THREE.LineBasicMaterial({ color: 0x1a6aa0, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     this.lines.frustumCulled = false;
     this.group.add(this.lines);
 
@@ -94,7 +95,7 @@ export class NeuralWorld extends World {
     }
     const pgeo = new THREE.BufferGeometry();
     pgeo.setAttribute('position', new THREE.BufferAttribute(this.pulsePositions, 3));
-    this.pulses = new THREE.Points(pgeo, new THREE.PointsMaterial({ color: 0x9af0ff, size: 2.2, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    this.pulses = new THREE.Points(pgeo, new THREE.PointsMaterial({ map: makeGlowSprite(), color: 0x9af0ff, size: 3.0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     this.pulses.frustumCulled = false;
     this.group.add(this.pulses);
   }
