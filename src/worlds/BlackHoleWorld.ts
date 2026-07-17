@@ -16,15 +16,24 @@ uniform float uTime; varying vec2 vUv;
 void main(){
   // RingGeometry uv: x = angulo [0,1], y = radio [0,1]
   float ang = vUv.x * 6.2831;
-  float rad = vUv.y;
-  float spiral = sin(ang*3.0 - rad*30.0 + uTime*3.0)*0.5+0.5;
-  float heat = pow(1.0 - rad, 1.5);                 // mas caliente por dentro
-  vec3 col = mix(vec3(1.0,0.9,0.6), vec3(1.0,0.35,0.05), rad);
-  col *= 0.5 + spiral*0.8;
-  col *= 0.6 + heat*1.6;
-  float doppler = 0.5 + 0.5*cos(ang);               // un lado se acerca (mas brillo azulado)
-  col += vec3(0.4,0.6,1.0) * pow(doppler,3.0) * 0.6;
-  gl_FragColor = vec4(col, 1.0);
+  float rad = vUv.y;                                 // 0 borde interior, 1 exterior
+  // gas turbulento: espirales gruesas + filamentos finos que corren mas rapido
+  float spiral = sin(ang*3.0 - rad*34.0 + uTime*3.0)*0.5+0.5;
+  float fine   = sin(ang*7.0 - rad*90.0 - uTime*5.0)*0.5+0.5;
+  float turb = mix(spiral, fine, 0.35);
+  float heat = pow(1.0 - rad, 1.6);                  // incandescente por dentro
+  vec3 hot  = vec3(1.0, 0.95, 0.82);
+  vec3 warm = vec3(1.0, 0.45, 0.12);
+  vec3 cool = vec3(0.55, 0.14, 0.03);
+  vec3 col = mix(warm, hot, heat);
+  col = mix(cool, col, smoothstep(0.0, 0.4, 1.0-rad));  // enfria hacia el exterior
+  col *= 0.35 + turb*0.65;
+  float doppler = 0.5 + 0.5*cos(ang);                // un lado se acerca: azul y mas brillante
+  col += vec3(0.35,0.55,1.0) * pow(doppler,4.0) * heat * 0.5;
+  col *= 0.55 + doppler*0.6;                          // asimetria de brillo Doppler
+  // alfa: banda que se apaga en ambos bordes -> el additivo no se satura a blanco
+  float alpha = smoothstep(0.0, 0.08, rad) * (0.22 + 0.78*heat) * (0.55 + 0.45*turb);
+  gl_FragColor = vec4(col, alpha);
 }`;
 
 const tmpFwd = new THREE.Vector3();
@@ -35,7 +44,7 @@ export class BlackHoleWorld extends World {
     flySpeed: 14,
     clearColor: 0x01010a,
     fogDensity: 0.0002,
-    bloom: { strength: 1.1, radius: 0.85, threshold: 0.5 },
+    bloom: { strength: 0.95, radius: 0.85, threshold: 0.56 },
     cameraStart: new THREE.Vector3(0, 0, 0),
   };
 

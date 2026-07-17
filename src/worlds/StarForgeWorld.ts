@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { World, WorldConfig } from '../core/World';
 import { createRng, range } from '../core/utils/random';
 import { isBehind, respawnAheadXZ } from '../core/utils/recycle';
+import { makeGlowSprite } from './utils/sprites';
 
 /**
  * STAR FORGE — un vivero estelar: pilares de polvo oscuro recortados contra el
@@ -36,6 +37,7 @@ const tmpScale = new THREE.Vector3();
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 interface Pillar { pos: THREE.Vector3; h: number; yaw: number; }
+interface Ignition { sprite: THREE.Sprite; light: THREE.PointLight; pos: THREE.Vector3; peak: number; timer: number; }
 
 export class StarForgeWorld extends World {
   readonly config: WorldConfig = {
@@ -53,6 +55,8 @@ export class StarForgeWorld extends World {
   private readonly data: Pillar[] = [];
   private stars!: THREE.Points;
   private starPos!: Float32Array;
+  private glow!: THREE.CanvasTexture;
+  private readonly ignitions: Ignition[] = [];
 
   init(camera: THREE.PerspectiveCamera): void {
     this.scene.add(new THREE.AmbientLight(0x442a55, 0.9));
@@ -95,6 +99,18 @@ export class StarForgeWorld extends World {
     this.stars = new THREE.Points(sgeo, new THREE.PointsMaterial({ size: 2.4, vertexColors: true, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     this.stars.frustumCulled = false;
     this.scene.add(this.stars);
+
+    // Estrellas recien nacidas: se encienden entre los pilares con un fogonazo.
+    // La PointLight ilumina de rebote los pilares (material Standard) y los saca
+    // de la silueta negra en el instante de la ignicion.
+    this.glow = makeGlowSprite(128, 0.3);
+    for (let i = 0; i < 3; i++) {
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glow, color: 0xffe2f0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+      this.scene.add(sprite);
+      const light = new THREE.PointLight(0xffc8e0, 0, 360, 2);
+      this.scene.add(light);
+      this.ignitions.push({ sprite, light, pos: new THREE.Vector3(), peak: 0, timer: range(this.rng, 0.3, 3.2) });
+    }
   }
 
   private placePillar(p: Pillar, camera: THREE.PerspectiveCamera, initial: boolean): void {
@@ -111,13 +127,32 @@ export class StarForgeWorld extends World {
     this.pillars.setMatrixAt(i, tmpMatrix);
   }
 
-  update(_dt: number, elapsed: number, camera: THREE.PerspectiveCamera): void {
+  update(dt: number, elapsed: number, camera: THREE.PerspectiveCamera): void {
     this.skyU.uTime.value = elapsed;
     let dirty = false;
     for (let i = 0; i < PILLAR_COUNT; i++) {
       if (isBehind(this.data[i].pos, camera, 80)) { this.placePillar(this.data[i], camera, false); this.writePillar(i, this.data[i]); dirty = true; }
     }
     if (dirty) this.pillars.instanceMatrix.needsUpdate = true;
+
+    for (const g of this.ignitions) {
+      g.timer -= dt;
+      if (g.timer <= 0 && g.peak <= 0) {
+        respawnAheadXZ(g.pos, camera, 70, FIELD_RADIUS * 0.6, Math.PI * 0.9, this.rng);
+        g.pos.y = range(this.rng, 24, 130);
+        g.light.position.copy(g.pos);
+        g.sprite.position.copy(g.pos);
+        g.peak = 1;
+      }
+      if (g.peak > 0) {
+        g.peak -= dt * 0.75;
+        const p = Math.max(0, g.peak);
+        g.light.intensity = p * 5200;
+        g.sprite.scale.setScalar(30 + (1 - p) * 70);
+        (g.sprite.material as THREE.SpriteMaterial).opacity = p;
+        if (g.peak <= 0) { g.light.intensity = 0; (g.sprite.material as THREE.SpriteMaterial).opacity = 0; g.timer = range(this.rng, 0.6, 3.6); }
+      }
+    }
 
     const p = this.starPos;
     for (let i = 0; i < STAR_COUNT; i++) {

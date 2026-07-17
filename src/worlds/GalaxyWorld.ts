@@ -21,14 +21,22 @@ export class GalaxyWorld extends World {
     clearColor: 0x02030a,
     fogDensity: 0.0006,
     bloom: { strength: 0.6, radius: 0.8, threshold: 0.65 },
-    cameraStart: new THREE.Vector3(0, 150, 430),
+    cameraStart: new THREE.Vector3(0, 120, 360),
   };
 
   private readonly rng = createRng(7777);
+  private tilt!: THREE.Group;
   private galaxy!: THREE.Points;
   private nebula!: THREE.Points;
+  private bgStars!: THREE.Points;
 
   init(): void {
+    // El disco vive inclinado: desde un vuelo horizontal se ve su cara (3/4),
+    // no de canto. El giro se aplica al hijo, alrededor de este eje inclinado.
+    this.tilt = new THREE.Group();
+    this.tilt.rotation.x = 0.62;
+    this.scene.add(this.tilt);
+    this.initBackground();
     const positions = new Float32Array(STAR_COUNT * 3);
     const colors = new Float32Array(STAR_COUNT * 3);
     const core = new THREE.Color(0xfff2c8);
@@ -64,7 +72,7 @@ export class GalaxyWorld extends World {
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, fog: false,
     }));
     this.galaxy.frustumCulled = false;
-    this.scene.add(this.galaxy);
+    this.tilt.add(this.galaxy);
 
     // Neblina de los brazos: pocos sprites enormes y muy tenues dan el volumen
     const NEBULA_COUNT = 70;
@@ -92,7 +100,7 @@ export class GalaxyWorld extends World {
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, fog: false,
     }));
     this.nebula.frustumCulled = false;
-    this.scene.add(this.nebula);
+    this.tilt.add(this.nebula);
 
     // Bulbo central: un halo grande y suave
     const halo = new THREE.Mesh(
@@ -100,12 +108,40 @@ export class GalaxyWorld extends World {
       new THREE.MeshBasicMaterial({ color: 0xffe9b0, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
     );
     halo.frustumCulled = false;
-    this.scene.add(halo);
+    this.tilt.add(halo);
   }
 
-  update(_dt: number, elapsed: number): void {
-    // Rotacion de disco solido, muy lenta
+  /** Campo de estrellas lejano que envuelve la escena y llena el vacio negro. */
+  private initBackground(): void {
+    const BG_COUNT = 5000;
+    const pos = new Float32Array(BG_COUNT * 3);
+    const col = new Float32Array(BG_COUNT * 3);
+    const c = new THREE.Color();
+    for (let i = 0; i < BG_COUNT; i++) {
+      const yaw = range(this.rng, 0, Math.PI * 2);
+      const pitch = Math.asin(range(this.rng, -1, 1));
+      const r = range(this.rng, 1500, 2600);
+      pos[i * 3] = Math.cos(yaw) * Math.cos(pitch) * r;
+      pos[i * 3 + 1] = Math.sin(pitch) * r;
+      pos[i * 3 + 2] = Math.sin(yaw) * Math.cos(pitch) * r;
+      c.setHSL(range(this.rng, 0.55, 0.7), range(this.rng, 0.0, 0.4), range(this.rng, 0.55, 1.0));
+      c.toArray(col, i * 3);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    this.bgStars = new THREE.Points(geo, new THREE.PointsMaterial({
+      size: 3.2, vertexColors: true, transparent: true, opacity: 0.9,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: false, fog: false,
+    }));
+    this.bgStars.frustumCulled = false;
+    this.scene.add(this.bgStars);
+  }
+
+  update(_dt: number, elapsed: number, camera: THREE.PerspectiveCamera): void {
+    // Rotacion de disco solido, muy lenta (alrededor del eje inclinado del grupo)
     this.galaxy.rotation.y = elapsed * 0.03;
     this.nebula.rotation.y = elapsed * 0.03;
+    this.bgStars.position.copy(camera.position); // el fondo nunca se alcanza
   }
 }

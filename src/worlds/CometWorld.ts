@@ -15,6 +15,17 @@ const STAR_COUNT = 1400;
 
 const SUN_DIR = new THREE.Vector3(0.4, 0.5, 1).normalize(); // las colas huyen de aqui
 
+// Cola con degradado: densa junto a la cabeza (apice) y desvanecida en la punta
+const TAIL_VERT = /* glsl */ `
+varying float vY;
+void main(){ vY = position.y; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
+const TAIL_FRAG = /* glsl */ `
+uniform vec3 uColor; varying float vY;
+void main(){
+  float a = smoothstep(-1.0, -0.05, vY);   // 0 en la punta lejana (y=-1), 1 junto a la cabeza (y=0)
+  gl_FragColor = vec4(uColor, a * a * 0.55);
+}`;
+
 const tmpMatrix = new THREE.Matrix4();
 const tmpQuat = new THREE.Quaternion();
 const tmpScale = new THREE.Vector3();
@@ -49,12 +60,12 @@ export class CometWorld extends World {
     this.heads.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.heads.frustumCulled = false;
 
-    // Cola: cono estirado, base ancha detras de la cabeza
+    // Cola: cono estirado, base ancha detras de la cabeza, con degradado propio
     const tailGeo = new THREE.ConeGeometry(1, 1, 8, 1, true);
-    tailGeo.translate(0, -0.5, 0); // punta en el origen (cabeza), se abre hacia -Y local
+    tailGeo.translate(0, -0.5, 0); // apice en el origen (cabeza), se abre hacia -Y local
     this.tails = new THREE.InstancedMesh(
       tailGeo,
-      new THREE.MeshBasicMaterial({ color: 0x66c8ff, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }),
+      new THREE.ShaderMaterial({ vertexShader: TAIL_VERT, fragmentShader: TAIL_FRAG, uniforms: { uColor: { value: new THREE.Color(0x74d0ff) } }, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
       COMET_COUNT,
     );
     this.tails.instanceMatrix.setUsage(THREE.DynamicDrawUsage);

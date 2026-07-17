@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { World, WorldConfig } from '../core/World';
 import { createRng, range } from '../core/utils/random';
 import { distanceXZ, respawnAheadXZ, wrapAround } from '../core/utils/recycle';
-import { makeGlowSprite } from './utils/sprites';
 
 /**
  * VOLCANO — vuelo sobre un mar de lava con espiras de roca y erupciones que
@@ -43,6 +42,29 @@ void main(){
   gl_FragColor = vec4(col,1.0);
 }`;
 
+// Ascuas: brillantes junto a la lava, se apagan al subir + parpadeo por semilla
+const EMBER_VERT = /* glsl */ `
+uniform float uTime; uniform float uHalf; uniform float uSize;
+attribute float aSeed;
+varying float vA;
+void main(){
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  float h = clamp(position.y / uHalf, 0.0, 1.0);
+  float flick = 0.55 + 0.45*sin(uTime*6.0 + aSeed*40.0);
+  vA = (1.0 - h) * flick;
+  gl_PointSize = uSize * (300.0 / -mv.z) * (0.5 + aSeed);
+  gl_Position = projectionMatrix * mv;
+}`;
+const EMBER_FRAG = /* glsl */ `
+uniform vec3 uColor; varying float vA;
+void main(){
+  vec2 uv = gl_PointCoord - 0.5;
+  float r = length(uv);
+  if(r > 0.5) discard;
+  float glow = smoothstep(0.5, 0.0, r);
+  gl_FragColor = vec4(mix(uColor, vec3(1.0,0.9,0.6), vA*0.5), glow * vA);
+}`;
+
 const tmpMatrix = new THREE.Matrix4();
 const tmpQuat = new THREE.Quaternion();
 const tmpScale = new THREE.Vector3();
@@ -68,6 +90,7 @@ export class VolcanoWorld extends World {
   private readonly spireData: Spire[] = [];
   private embers!: THREE.Points;
   private emberPos!: Float32Array;
+  private emberU!: { [k: string]: THREE.IUniform };
   private readonly erupts: Erupt[] = [];
 
   init(camera: THREE.PerspectiveCamera): void {
@@ -101,14 +124,19 @@ export class VolcanoWorld extends World {
     this.scene.add(this.spires);
 
     this.emberPos = new Float32Array(EMBER_COUNT * 3);
+    const emberSeed = new Float32Array(EMBER_COUNT);
     for (let i = 0; i < EMBER_COUNT; i++) {
       this.emberPos[i * 3] = camera.position.x + range(this.rng, -EMBER_HALF, EMBER_HALF);
-      this.emberPos[i * 3 + 1] = range(this.rng, 2, EMBER_HALF);
+      // sesgado hacia abajo: mas densas junto a la lava que arriba
+      this.emberPos[i * 3 + 1] = 2 + Math.pow(this.rng(), 1.8) * EMBER_HALF;
       this.emberPos[i * 3 + 2] = camera.position.z + range(this.rng, -EMBER_HALF, EMBER_HALF);
+      emberSeed[i] = this.rng();
     }
     const egeo = new THREE.BufferGeometry();
     egeo.setAttribute('position', new THREE.BufferAttribute(this.emberPos, 3));
-    this.embers = new THREE.Points(egeo, new THREE.PointsMaterial({ map: makeGlowSprite(), color: 0xff8a3a, size: 1.8, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    egeo.setAttribute('aSeed', new THREE.BufferAttribute(emberSeed, 1));
+    this.emberU = { uTime: { value: 0 }, uHalf: { value: EMBER_HALF }, uSize: { value: 3.2 }, uColor: { value: new THREE.Color(0xff7a2a) } };
+    this.embers = new THREE.Points(egeo, new THREE.ShaderMaterial({ vertexShader: EMBER_VERT, fragmentShader: EMBER_FRAG, uniforms: this.emberU, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
     this.embers.frustumCulled = false;
     this.scene.add(this.embers);
 
@@ -135,6 +163,7 @@ export class VolcanoWorld extends World {
 
   update(dt: number, elapsed: number, camera: THREE.PerspectiveCamera): void {
     this.groundU.uTime.value = elapsed;
+    this.emberU.uTime.value = elapsed;
     (this.groundU.uCamPos.value as THREE.Vector3).copy(camera.position);
     this.ground.position.set(camera.position.x, 0, camera.position.z);
 

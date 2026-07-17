@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { World, WorldConfig } from '../core/World';
-import { createRng, range, rangeInt } from '../core/utils/random';
+import { createRng, range, rangeInt, pick } from '../core/utils/random';
 import { makeGlowSprite } from './utils/sprites';
+
+// Paleta sinaptica: mayoria fria, algun acento calido que rompe el azul plano
+const PALETTE = [0x9af0ff, 0x66a0ff, 0x66ffcc, 0xb080ff, 0x9af0ff, 0x66a0ff, 0xffc27a];
+const tmpColor = new THREE.Color();
 
 /**
  * NEURAL NET — vuelas dentro de una red neuronal. Los nodos viven en el
@@ -56,18 +60,22 @@ export class NeuralWorld extends World {
       ));
     }
 
-    // Nodos como esferas instanciadas emisivas
+    // Nodos como esferas instanciadas emisivas, con color por nodo
     const nodeMesh = new THREE.InstancedMesh(
       new THREE.SphereGeometry(1, 10, 10),
-      new THREE.MeshBasicMaterial({ color: 0x2f7fb8, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
       NODE_COUNT,
     );
     nodeMesh.frustumCulled = false;
+    const q = new THREE.Quaternion();
     for (let i = 0; i < NODE_COUNT; i++) {
-      tmpMatrix.compose(this.nodes[i], new THREE.Quaternion(), tmpScale.setScalar(range(this.rng, 0.6, 1.3)));
+      tmpMatrix.compose(this.nodes[i], q, tmpScale.setScalar(range(this.rng, 0.6, 1.3)));
       nodeMesh.setMatrixAt(i, tmpMatrix);
+      tmpColor.setHex(pick(this.rng, PALETTE)).multiplyScalar(range(this.rng, 0.5, 0.8));
+      nodeMesh.setColorAt(i, tmpColor);
     }
     nodeMesh.instanceMatrix.needsUpdate = true;
+    if (nodeMesh.instanceColor) nodeMesh.instanceColor.needsUpdate = true;
     this.group.add(nodeMesh);
 
     // Aristas entre nodos cercanos (con tope)
@@ -90,12 +98,16 @@ export class NeuralWorld extends World {
 
     // Pulsos que viajan por las aristas
     this.pulsePositions = new Float32Array(PULSE_COUNT * 3);
+    const pulseColors = new Float32Array(PULSE_COUNT * 3);
     for (let i = 0; i < PULSE_COUNT; i++) {
       this.pulseData.push({ edge: rangeInt(this.rng, 0, this.edges.length - 1), t: this.rng(), speed: range(this.rng, 0.3, 1.1) });
+      tmpColor.setHex(pick(this.rng, PALETTE));
+      pulseColors[i * 3] = tmpColor.r; pulseColors[i * 3 + 1] = tmpColor.g; pulseColors[i * 3 + 2] = tmpColor.b;
     }
     const pgeo = new THREE.BufferGeometry();
     pgeo.setAttribute('position', new THREE.BufferAttribute(this.pulsePositions, 3));
-    this.pulses = new THREE.Points(pgeo, new THREE.PointsMaterial({ map: makeGlowSprite(), color: 0x9af0ff, size: 3.0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    pgeo.setAttribute('color', new THREE.BufferAttribute(pulseColors, 3));
+    this.pulses = new THREE.Points(pgeo, new THREE.PointsMaterial({ map: makeGlowSprite(), vertexColors: true, size: 3.2, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     this.pulses.frustumCulled = false;
     this.group.add(this.pulses);
   }

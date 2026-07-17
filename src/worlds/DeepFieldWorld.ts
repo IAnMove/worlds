@@ -9,7 +9,7 @@ import { wrapAround } from '../core/utils/recycle';
  * un guino espiral); se envuelven alrededor de la camara. Negro y sereno.
  */
 
-const GALAXY_COUNT = 700;
+const GALAXY_COUNT = 820;
 const HALF = 520;
 
 const VERT = /* glsl */ `
@@ -23,6 +23,7 @@ void main(){
   gl_Position = projectionMatrix * mv;
 }`;
 const FRAG = /* glsl */ `
+uniform float uTime;
 varying vec3 vColor; varying float vSeed;
 void main(){
   vec2 uv = gl_PointCoord - 0.5;
@@ -30,8 +31,11 @@ void main(){
   if(r > 0.5) discard;
   float glow = smoothstep(0.5, 0.0, r);
   float ang = atan(uv.y, uv.x);
-  float spiral = 0.55 + 0.45*sin(ang*2.0 + r*20.0 + vSeed*12.0);
-  vec3 col = vColor * glow * spiral;
+  // los brazos giran despacio, cada galaxia a su ritmo y sentido
+  float spin = uTime * (0.15 + vSeed*0.3) * (vSeed > 0.5 ? 1.0 : -1.0);
+  float spiral = 0.55 + 0.45*sin(ang*2.0 + r*20.0 + vSeed*12.0 + spin);
+  float twinkle = 0.78 + 0.22*sin(uTime*0.6 + vSeed*25.0);
+  vec3 col = vColor * glow * spiral * twinkle;
   col += vColor * pow(glow, 4.0) * 0.9;   // nucleo brillante
   gl_FragColor = vec4(col, glow);
 }`;
@@ -67,14 +71,15 @@ export class DeepFieldWorld extends World {
     geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
     geo.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
     this.field = new THREE.Points(geo, new THREE.ShaderMaterial({
-      vertexShader: VERT, fragmentShader: FRAG, uniforms: { uSize: { value: 14 } },
+      vertexShader: VERT, fragmentShader: FRAG, uniforms: { uSize: { value: 14 }, uTime: { value: 0 } },
       transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
     }));
     this.field.frustumCulled = false;
     this.scene.add(this.field);
   }
 
-  update(_dt: number, _elapsed: number, camera: THREE.PerspectiveCamera): void {
+  update(_dt: number, elapsed: number, camera: THREE.PerspectiveCamera): void {
+    (this.field.material as THREE.ShaderMaterial).uniforms.uTime.value = elapsed;
     const p = this.positions;
     for (let i = 0; i < GALAXY_COUNT; i++) {
       p[i * 3] = wrapAround(p[i * 3], camera.position.x, HALF);

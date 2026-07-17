@@ -91,7 +91,7 @@ export class WormholeWorld extends World {
     const sgeo = new THREE.BufferGeometry();
     sgeo.setAttribute('position', new THREE.BufferAttribute(this.starPositions, 3));
     this.stars = new THREE.Points(sgeo, new THREE.PointsMaterial({
-      map: makeGlowSprite(), color: 0xaad4ff, size: 1.6, transparent: true, opacity: 0.8,
+      map: makeGlowSprite(), color: 0xaad4ff, size: 1.0, transparent: true, opacity: 0.62,
       blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
     }));
     this.stars.frustumCulled = false;

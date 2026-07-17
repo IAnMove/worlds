@@ -18,7 +18,11 @@ uniform vec3 uRo, uFwd, uRight, uUp;
 varying vec2 vUv;
 
 float de(vec3 p){
-  p = mod(p, 10.0) - 5.0;              // lattice infinita
+  vec3 cell = floor(p / 10.0);        // cada celda gira distinto: rompe la simetria de papel pintado
+  p = mod(p, 10.0) - 5.0;             // lattice infinita
+  float a = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453) * 6.28318;
+  float s = sin(a), c = cos(a);
+  p.xz = mat2(c, -s, s, c) * p.xz;
   vec3 z = p; float dr = 1.0; float r = 0.0;
   float power = 7.0 + sin(uTime*0.2)*1.0;
   for(int i=0;i<5;i++){
@@ -34,6 +38,15 @@ float de(vec3 p){
 }
 
 float hash1(vec3 c){ return fract(sin(dot(c, vec3(12.9898, 78.233, 37.719)))*43758.5453); }
+
+// Normal por gradiente de la DE: da forma 3D a los bulbos (antes se veian planos)
+vec3 calcNormal(vec3 p){
+  vec2 e = vec2(0.0015, 0.0);
+  return normalize(vec3(
+    de(p+e.xyy)-de(p-e.xyy),
+    de(p+e.yxy)-de(p-e.yxy),
+    de(p+e.yyx)-de(p-e.yyx)));
+}
 
 void main(){
   vec2 uv = vUv - 0.5; uv.x *= uRes.x/uRes.y;
@@ -52,17 +65,26 @@ void main(){
   // fondo: gradiente vertical tenue
   vec3 col = mix(vec3(0.012, 0.010, 0.045), vec3(0.030, 0.015, 0.075), rd.y*0.5+0.5);
   if(hit){
+    vec3 p = ro + rd*t;
+    vec3 n = calcNormal(p);
     float shade = exp(-t*0.09);
     float ao = 1.0 - steps/64.0;         // oclusion barata: mas pasos = mas hendidura
     ao = ao*ao;
     // tinte propio por celda de la reticula: cada bulbo tiene su color
-    float ch = hash1(floor((ro + rd*t)/10.0));
+    float ch = hash1(floor(p/10.0));
     vec3 a = vec3(0.08, 0.85, 0.65);
     vec3 b = vec3(0.60, 0.20, 1.00);
-    vec3 c = vec3(1.00, 0.55, 0.25);
+    vec3 cc = vec3(1.00, 0.55, 0.25);
     vec3 tint = mix(a, b, ch);
-    tint = mix(tint, c, smoothstep(0.75, 1.0, ch));
-    col = tint * shade * ao * 1.5;
+    tint = mix(tint, cc, smoothstep(0.75, 1.0, ch));
+    // iluminacion: difusa (forma) + especular (relieve) + fresnel (borde)
+    vec3 lightDir = normalize(vec3(0.5, 0.7, -0.45));
+    float diff = max(dot(n, lightDir), 0.0);
+    float spec = pow(max(dot(reflect(-lightDir, n), -rd), 0.0), 20.0);
+    float fres = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+    col = tint * (0.2 + 0.8*diff) * ao * shade * 1.35;
+    col += vec3(0.9, 0.95, 1.0) * spec * 0.6 * shade;
+    col += tint * fres * 0.6 * shade;
   }
   col += vec3(0.15, 0.7, 0.65) * min(glow, 0.35);  // halo de proximidad (acotado)
   gl_FragColor = vec4(col, 1.0);

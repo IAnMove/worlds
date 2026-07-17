@@ -20,6 +20,7 @@ uniform float uTime;
 uniform vec3 uCamPos;
 uniform vec3 uLow;
 uniform vec3 uHigh;
+uniform vec3 uSun;
 varying vec3 vWorld;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
 float noise(vec2 p){
@@ -28,14 +29,20 @@ float noise(vec2 p){
 }
 float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<5;i++){ v+=a*noise(p); p*=2.0; a*=0.5; } return v; }
 void main(){
-  vec2 uv = vWorld.xz * 0.004 + vec2(uTime*0.015, uTime*0.008);
+  vec2 uv = vWorld.xz * 0.0038 + vec2(uTime*0.012, uTime*0.007);
   float n = fbm(uv);
-  float clouds = smoothstep(0.4, 0.8, n);
-  vec3 col = mix(uLow, uHigh, clouds);
-  // Brillo calido donde las nubes son mas densas (luz del amanecer)
-  col += vec3(1.0, 0.6, 0.35) * pow(clouds, 2.5) * 0.28;
+  // relieve: comparar con una muestra desplazada hacia el sol da cimas iluminadas
+  // y flancos en sombra, asi las nubes tienen volumen en vez de un velo plano
+  float nl = fbm(uv + vec2(0.05, 0.03));
+  float relief = clamp((n - nl) * 7.0 + 0.5, 0.0, 1.0);
+  float clouds = smoothstep(0.42, 0.80, n);
+  vec3 col = mix(uLow, uHigh, clouds * (0.35 + 0.65 * relief));
+  col += uSun * pow(clouds, 3.0) * relief * 0.35;      // borde calido en las cimas al sol
+  // huecos entre nubes: se asoma un cielo mas frio y profundo
+  vec3 gap = mix(uLow * 0.55, vec3(0.22, 0.24, 0.36), 0.5);
+  col = mix(gap, col, smoothstep(0.30, 0.52, n));
   float d = distance(vWorld.xz, uCamPos.xz);
-  float fade = 1.0 - exp(-pow(d * 0.0011, 2.0));
+  float fade = 1.0 - exp(-pow(d * 0.0012, 2.0));
   col = mix(col, uHigh, fade);
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -53,10 +60,10 @@ void main(){
   vec3 d = normalize(vDir);
   float h = clamp(d.y*0.5+0.5, 0.0, 1.0);
   vec3 col = mix(uHorizon, uZenith, pow(h, 0.7));
-  vec3 sunDir = normalize(vec3(0.55, 0.12, -1.0));
+  vec3 sunDir = normalize(vec3(0.55, 0.10, -1.0));
   float s = distance(d, sunDir);
-  col = mix(col, uSun, smoothstep(0.14, 0.05, s));
-  col += uSun * smoothstep(0.6, 0.1, s) * 0.3;
+  col = mix(col, uSun, smoothstep(0.11, 0.04, s));
+  col += uSun * smoothstep(0.55, 0.09, s) * 0.28;
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -78,8 +85,9 @@ export class CloudSeaWorld extends World {
     this.cloudU = {
       uTime: { value: 0 },
       uCamPos: { value: new THREE.Vector3() },
-      uLow: { value: new THREE.Color(0x8a4a2e) },
-      uHigh: { value: new THREE.Color(0xf0cfa4) },
+      uLow: { value: new THREE.Color(0x7a4028) },
+      uHigh: { value: new THREE.Color(0xe6bf90) },
+      uSun: { value: new THREE.Color(0xffb264) },
     };
     const geo = new THREE.PlaneGeometry(3000, 3000);
     geo.rotateX(-Math.PI / 2);

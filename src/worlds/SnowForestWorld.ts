@@ -55,7 +55,18 @@ export class SnowForestWorld extends World {
 
     const geo = new THREE.ConeGeometry(1, 1, 7);
     geo.translate(0, 0.5, 0);
-    this.trees = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0x16324a, roughness: 0.9, metalness: 0, flatShading: true, emissive: 0x0a1826, emissiveIntensity: 0.3 }), TREE_COUNT);
+    // Nieve posada: color por vertice del tronco azul-noche a la punta nevada
+    const posAttr = geo.attributes.position;
+    const treeCol = new Float32Array(posAttr.count * 3);
+    const bark = new THREE.Color(0x1c3b56);
+    const snow = new THREE.Color(0xd6e6ff);
+    const tmpC = new THREE.Color();
+    for (let i = 0; i < posAttr.count; i++) {
+      tmpC.copy(bark).lerp(snow, THREE.MathUtils.smoothstep(posAttr.getY(i), 0.45, 1.0));
+      treeCol[i * 3] = tmpC.r; treeCol[i * 3 + 1] = tmpC.g; treeCol[i * 3 + 2] = tmpC.b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(treeCol, 3));
+    this.trees = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0, flatShading: true, emissive: 0x0e1c30, emissiveIntensity: 0.35 }), TREE_COUNT);
     this.trees.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.trees.frustumCulled = false;
     for (let i = 0; i < TREE_COUNT; i++) {
